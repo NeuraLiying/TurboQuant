@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Local environments and caches
+.venv/
+venv/
+.env
+.env.*
+
+# Large or machine-local reproduction artifacts
+reproduce/runs/
+reproduce/logs/
+reproduce/offload/
+reproduce/generated_data/
+reproduce/archive/
+results/
+
+# Local paper copy
+paper/*.pdf
+
+# Editor / OS
+.DS_Store
+*.swp
+*.swo

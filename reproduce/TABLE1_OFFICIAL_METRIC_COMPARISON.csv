@@ -1,0 +1,7 @@
+Method,KV Size,Source,SingleQA,MultiQA,Summarization,Few shot,Synthetic,Code,Average
+Full Cache,16.0,paper,45.29,45.16,26.55,68.38,59.54,46.28,50.06
+Full Cache,16.0,local,44.45,44.18,29.29,69.53,52.60,62.26,50.38
+TurboQuant,2.5,paper,44.16,44.96,24.80,68.01,59.65,45.76,49.44
+TurboQuant,2.5,local,38.61,36.01,27.54,67.12,48.22,55.02,45.42
+TurboQuant,3.5,paper,45.01,45.31,26.00,68.63,59.95,46.17,50.06
+TurboQuant,3.5,local,42.73,43.04,28.72,68.59,52.06,61.16,49.38

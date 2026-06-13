@@ -1,0 +1,680 @@
+# TurboQuant Reproduction Status
+
+Last updated: 2026-06-11 21:40 Asia/Shanghai
+
+## Current Scope
+
+- First model: `meta-llama/Llama-3.1-8B-Instruct`
+- First hardware target: NVIDIA GeForce RTX 4090
+- Required comparisons: Full Cache / Full-Precision vs TurboQuant only
+- Project code location: `/home/liying/projects/turboquant`
+- Experiment records: `/home/liying/projects/turboquant/reproduce`
+
+## Official Table 1 Protocol
+
+- Protocol note: `reproduce/TABLE1_OFFICIAL_PROTOCOL.md`.
+- Paper target: Table 1 is captioned as LongBench-V1 results for `Llama-3.1-8B-Instruct`.
+- Official local Table 1 numbers require full LongBench-V1 task splits. Smoke runs with `--max-examples 1`, `--max-examples 20`, or similar caps are not Table 1 comparison results.
+- Current official Full Cache progress: `reproduce/runs/table1_official/table1_full_cache_progress.md`.
+- Full Cache comparison note: `reproduce/TABLE1_FULL_CACHE_COMPARISON.md`.
+- Current Full Cache status after the latest refresh: 16 / 16 LongBench-V1 tasks complete, no partial or missing tasks.
+- Current Full Cache local average: 48.71 versus paper 50.06.
+- Category-level caveat: the average is close, but Summarization and Synthetic are lower than paper while Code is higher, so the local baseline should be compared category-by-category, not by average alone.
+- TurboQuant 2.5-bit progress: `reproduce/runs/table1_official/table1_turboquant_2_5bit_progress.md`, currently 1 / 16 tasks complete.
+- First TurboQuant 2.5-bit official full task: `trec` 200/200, score 70.50, average cache storage ratio 0.173.
+- TurboQuant 3.5-bit progress: `reproduce/runs/table1_official/table1_turboquant_3_5bit_progress.md`, currently 0 / 16 tasks complete.
+- Next active Table 1 work: continue TurboQuant 2.5-bit on the same full task splits, preferably finishing the remaining Few shot tasks before moving to slower long-context categories.
+
+## Current First-Stage Report
+
+- Current report: `reproduce/FIRST_STAGE_REPORT_CURRENT.md`
+- Machine-readable report: `reproduce/FIRST_STAGE_REPORT_CURRENT.json`
+- Report builder: `scripts/build_first_stage_report.py`
+- Generated: 2026-06-11 09:07 Asia/Shanghai
+- Completion status from the generated report:
+  - Table 1 full reproduction: incomplete
+  - Figure 4 full reproduction: incomplete
+  - Figure 5 DBpedia reproduction: complete
+  - Figure 5 GloVe reproduction: incomplete
+  - Core algorithm validation: complete
+- The older `reproduce/FIRST_STAGE_REPORT.md` remains as a detailed manual narrative, but `FIRST_STAGE_REPORT_CURRENT.{md,json}` is the current reproducible summary entry point.
+
+## Local Assets
+
+- Llama model cache: validated by `reproduce/logs/asset_report_turboquant_env.json`
+  - Snapshot: `/home/liying/.cache/huggingface/hub/models--meta-llama--Llama-3.1-8B-Instruct/snapshots/0e9e39f249a16976918f6564b8830bc894c89659`
+  - Safetensors shards: 4
+- HF dataset cache: validated by `reproduce/logs/asset_report_needle_multisplit_2026-06-11.json`
+  - LongBench-E `2wikimqa`: 300 test examples
+  - LongBench `2wikimqa`: 200 test examples
+  - Needle 16k ar/de/en/es/hi/vi/zh: 2400 examples per split, 16800 total
+  - DBpedia OpenAI3 1536d: 26 Arrow shards
+  - DBpedia OpenAI3 3072d: 63 Arrow shards
+- Enhanced cache inventory: `reproduce/logs/hf_cache_inventory_enhanced_2026-06-11.json`
+  - `dataset_info.json` files: 5
+  - Arrow files: 98
+  - Lock files: 17
+  - Incomplete marker files: 5
+- Full cache inventory: `reproduce/logs/hf_cache_inventory_2026-06-11.json`
+  - `dataset_info.json` files: 5
+  - Arrow files: 98
+  - Confirms DBpedia 1536d/3072d, LongBench-E `2wikimqa`, LongBench `2wikimqa`, and multilingual Needle `16k`.
+  - Does not currently show other LongBench tasks or Needle lengths under `/home/liying/datasets/turboquant/hf_cache`.
+- Refreshed full cache inventory: `reproduce/logs/hf_cache_inventory_2026-06-11_refresh.json`
+  - `dataset_info.json` files: 5
+  - Arrow files: 98
+  - Same coverage as above; the `downloads` directory is empty.
+- User-claim refresh inventory: `reproduce/logs/hf_cache_inventory_2026-06-11_user_claim_refresh.json`
+  - `dataset_info.json` files: 5
+  - Arrow files: 98
+  - Same coverage as above after rechecking `/home/liying/datasets/turboquant/hf_cache`.
+  - Audit: `reproduce/DATA_COVERAGE_AUDIT.md`
+- Latest reproduction state refresh: `reproduce/logs/reproduction_state_refresh_goal_resume_paths_fixed_2026_06_11.{json,md}`
+  - LongBench prepare: 2 cached, 30 missing.
+  - Needle prepare: found `16k`; missing `4k`, `8k`, `32k`, `65k`, `104k`.
+  - Table 1 manifest: 6 complete, 90 missing-dataset.
+  - Figure 4 plan: 2 complete, 10 missing-dataset.
+- Snapshot-aware LongBench scan: `reproduce/logs/longbench_cache_prepare_snapshot_aware_2026-06-11.json`
+  - Checks both `/home/liying/datasets/turboquant/hf_cache` and `/home/liying/.cache/huggingface/hub`.
+  - Current result remains 2 cached entries and 30 missing entries.
+  - Hub snapshots currently contain only LongBench/LongBench-E `2wikimqa` parquet files.
+- Strong reproduction asset audit: `reproduce/logs/reproduction_asset_audit_symlink_aware_2026-06-11.{json,md}`
+  - LongBench/LongBench-E Table 1 entries: 2 materialized, 30 metadata-or-lock-only.
+  - Needle Figure 4 target configs: 16k materialized; 4k, 8k, 32k, 65k, and 104k missing.
+  - DBpedia Figure 5 configs: 1536d and 3072d materialized.
+  - The audit follows Hugging Face snapshot symlinks, so parquet/csv symlink files count when present.
+- Raw data asset probe: `reproduce/logs/raw_data_asset_probe_2026-06-11.{json,md}`
+  - Scans project files, `/home/liying/datasets/turboquant`, and Hugging Face Hub snapshots/blobs for unregistered raw data.
+  - Result: no LongBench target data beyond `2wikimqa`; no Needle target data beyond `16k`.
+- Direct `datasets.load_dataset` checks on 2026-06-11 confirmed only LongBench/LongBench-E `2wikimqa` and Needle `16k` are cached. Public Hugging Face URL probes timed out to `huggingface.co:443`, so missing data cannot currently be fetched from this environment.
+- GloVe: not provided yet
+
+## Environment
+
+- Dedicated conda env target: `turboquant`
+- Environment spec: `/home/liying/projects/turboquant/environment.yml`
+- Dedicated conda env status: created and validated.
+- Creation method: cloned from `layer_skip`; details in `reproduce/ENVIRONMENT.md`.
+- Existing reference env: `layer_skip` has PyTorch, Transformers, datasets, accelerate, and flash-attn.
+- Asset inspection was run with `turboquant`.
+- CUDA is visible from `turboquant`: 8 x NVIDIA GeForce RTX 4090.
+- Current GPU availability from `asset_report_turboquant_env.json`:
+  - Mostly idle: GPU 0, 1, 4, 5
+  - Busy: GPU 2, 3, 6, 7
+
+## Next Steps
+
+- [x] Validate local model and dataset cache with `scripts/inspect_assets.py`.
+- [x] Create or validate the `turboquant` conda environment.
+- [x] Implement TurboQuant core algorithm.
+- [x] Run Figure 3 algorithm validation.
+- [x] Implement Llama full-cache LongBench smoke evaluation.
+- [x] Implement resumable Llama full-cache LongBench evaluation script.
+- [x] Implement Llama TurboQuant KV cache prototype.
+- [x] Run Llama TurboQuant KV cache smoke.
+- [x] Implement compressed/bit-packed Llama TurboQuant KV cache storage for integer bit-widths.
+- [x] Implement fractional effective-bit outlier-channel strategy for 2.5-bit / 3.5-bit smoke runs.
+- [x] Run Llama TurboQuant 2.5-bit and 3.5-bit smoke evaluations.
+- [x] Implement LongBench-style scoring and Table-1-shaped aggregation.
+- [x] Run full cached LongBench-E `2wikimqa` Full Cache evaluation.
+- [x] Implement Needle-In-A-Haystack 16k evaluation and summary scripts.
+- [x] Run Llama Needle full-cache and TurboQuant smoke evaluations.
+- [x] Run local Needle 16k 24-example Full-Precision and TurboQuant grid.
+- [x] Generate local Figure-4-style Needle 16k summary artifacts.
+- [x] Add generated local Needle length-grid data builder and target-token filtering.
+- [x] Run generated local Needle 4k diagnostic Full-Precision and TurboQuant slice.
+- [x] Register all local Needle 16k language splits and validate multi-Arrow loading.
+- [x] Extend Needle cache preparation to scan/register multiple paper-style length configs.
+- [x] Add Figure-4-style Needle heatmap artifact builder and generate local 16k / generated 4k heatmaps.
+- [x] Add Figure 4 Needle run planner and available-output heatmap pipeline.
+- [x] Add TurboQuant KV compression policy summary for existing 2.5-bit / 3.5-bit runs.
+- [x] Implement TurboQuant ANN recall and quantization-time scripts for DBpedia.
+- [x] Run DBpedia 1536d/3072d ANN smoke and Table 2-style timing smoke.
+- [x] Run DBpedia 1536d/3072d ANN full-scale 100k/1k TurboQuant results.
+- [x] Generate DBpedia Figure 5 plot and Table 2 summary artifacts.
+- [x] Add machine-readable HF cache inventory script and record current data coverage.
+- [x] Add strong reproduction asset audit for Table 1 / Figure 4 / Figure 5 required local assets.
+- [x] Add LongBench `--start-index` / `--end-index` chunking support for resumable long TurboQuant runs.
+- [x] Run LongBench-E `2wikimqa` TurboQuant 2.5-bit and 3.5-bit 300-example complete local task.
+- [x] Run standard LongBench `2wikimqa` Full Cache / TurboQuant 2.5-bit / TurboQuant 3.5-bit 200-example complete local task.
+- [x] Add JSONL shard merge utility for multi-GPU chunked runs.
+- [x] Add LongBench/LongBench-E cache preparation utility and local missing-data report.
+- [x] Add Table 1 runnable manifest for dataset/method coverage tracking.
+- [x] Add Table 1 multi-GPU run planner and available-output summary pipeline.
+- [x] Add non-model reproduction state refresh script that updates cache registration, audits, manifests, and run plans.
+- [x] Add automated first-stage report builder and generate `reproduce/FIRST_STAGE_REPORT_CURRENT.{md,json}`.
+- [x] Re-audit `/home/liying/datasets/turboquant/hf_cache` after user data-availability note.
+- [x] Add snapshot-aware LongBench data discovery and parquet loading support.
+- [x] Add LongBench multi-Arrow loading support and run loader regression smoke.
+- [x] Directly test missing LongBench config loading; `narrativeqa` is not materialized locally and THUDM fallback needs network.
+- [ ] Run Llama TurboQuant LongBench full evaluation after remaining LongBench tasks are cached.
+- [ ] Acquire/cache the remaining LongBench tasks needed for Table 1.
+
+## Core Algorithm Validation
+
+- Implementation:
+  - `turboquant/codebook.py`
+  - `turboquant/core.py`
+  - `tests/test_core.py`
+  - `scripts/validate_figure3_core.py`
+- Unit test: `conda run -n turboquant python -m pytest tests/test_core.py -q`
+  - Result: 6 passed
+- Figure 3-style smoke output:
+  - CSV: `reproduce/runs/figure3_core_d256.csv`
+  - Summary: `reproduce/runs/figure3_core_d256_summary.json`
+- `d=256`, 512 vectors, seeds 0/1/2:
+  - b=1 MSE: 0.3611
+  - b=2 MSE: 0.1167
+  - b=3 MSE: 0.0341
+  - b=4 MSE: 0.0094
+- These MSE values are aligned with the paper's reported small-bit values: approximately 0.36, 0.117, 0.03, 0.009.
+
+## Llama Full-Cache LongBench Smoke
+
+- Script: `experiments/longbench/run_full_cache_smoke.py`
+- Command:
+  - `CUDA_VISIBLE_DEVICES=0 conda run -n turboquant python experiments/longbench/run_full_cache_smoke.py --max-examples 1 --device cuda:0 --output reproduce/runs/longbench_full_cache_smoke_1.jsonl`
+- Output:
+  - JSONL: `reproduce/runs/longbench_full_cache_smoke_1.jsonl`
+  - Summary: `reproduce/runs/longbench_full_cache_smoke_1.summary.json`
+- Result:
+  - Dataset: LongBench-E `2wikimqa`
+  - Examples: 1
+  - Prompt tokens: 4194
+  - Contains-answer accuracy: 1.0
+  - Generation elapsed after model load: 2.12 seconds
+- Note:
+  - Loading 4 Llama safetensor shards took about 1m43s.
+  - GPU 0 memory reached about 15.7GB during the run and was released afterward.
+
+## Llama Full-Cache LongBench Debug
+
+- Script: `experiments/longbench/run_full_cache_eval.py`
+- Summary helper: `scripts/summarize_jsonl_accuracy.py`
+- Output:
+  - JSONL: `reproduce/runs/longbench_full_cache_debug_2.jsonl`
+  - Per-run summary: `reproduce/runs/longbench_full_cache_debug_2.summary.json`
+  - Aggregate summary: `reproduce/runs/longbench_full_cache_debug_2.aggregate.json`
+- Result:
+  - Dataset: LongBench-E `2wikimqa`
+  - Examples: 2
+  - Contains-answer accuracy: 1.0
+  - Average prompt tokens: 4285.5
+  - Average generated tokens: 52.0
+  - Average latency after model load: 1.92 seconds/example
+
+## Llama Full-Cache LongBench-E 2wikimqa Complete Local Run
+
+- Script: `experiments/longbench/run_full_cache_eval.py`
+- Output:
+  - JSONL: `reproduce/runs/longbench_e_2wikimqa_full_cache_all.jsonl`
+  - Summary: `reproduce/runs/longbench_e_2wikimqa_full_cache_all.summary.json`
+  - Aggregate: `reproduce/runs/longbench_e_2wikimqa_full_cache_all.aggregate.json`
+- Result:
+  - Dataset: LongBench-E `2wikimqa`
+  - Examples: 300/300
+  - Cache mode: Full Cache
+  - Contains-answer accuracy: 0.65
+  - LongBench-style `2wikimqa` score: 11.2523
+  - Average prompt tokens: 8904.37
+  - Average generated tokens: 50.73
+  - Average latency after model load: 2.76 seconds/example
+  - Wall time reported by script: 835.23 seconds
+- Updated partial Table-1-shaped output:
+  - JSON: `reproduce/runs/table1_llama_partial_current.json`
+  - CSV: `reproduce/runs/table1_llama_partial_current.csv`
+  - Markdown: `reproduce/runs/table1_llama_partial_current.md`
+- Note:
+  - This is a complete run for the one locally cached LongBench-E task.
+  - It is still not a complete Table 1 reproduction because the other LongBench categories/tasks are not present locally.
+  - `table1_llama_partial_current` and `table1_llama_2wikimqa_mixed_current` now both track the complete local 300/300 Full Cache and TurboQuant rows.
+
+## Llama TurboQuant LongBench-E 2wikimqa Chunked Local Runs
+
+- Script: `experiments/longbench/run_full_cache_eval.py`
+- New chunking options:
+  - `--start-index`
+  - `--end-index`
+  - `--progress-every`
+- Verification:
+  - Full Cache slice `0:1` succeeded with original dataset index preserved.
+  - Output: `reproduce/runs/longbench_e_2wikimqa_full_cache_slice_verify_0_1.jsonl`
+- TurboQuant 2.5-bit chunk:
+  - JSONL: `reproduce/runs/longbench_e_2wikimqa_turboquant_2_5bit_chunked.jsonl`
+  - Aggregate: `reproduce/runs/longbench_e_2wikimqa_turboquant_2_5bit_chunked.aggregate.json`
+  - Dataset indices: 0 through 299
+  - Examples: 300/300
+  - Contains-answer accuracy: 0.5233
+  - LongBench-style `2wikimqa` score: 12.2449
+  - Average prompt tokens: 8904.37
+  - Average latency after model load: 43.89 seconds/example
+  - Average stored/dense cache ratio: 0.1727
+- TurboQuant 3.5-bit chunk:
+  - JSONL: `reproduce/runs/longbench_e_2wikimqa_turboquant_3_5bit_chunked.jsonl`
+  - Aggregate: `reproduce/runs/longbench_e_2wikimqa_turboquant_3_5bit_chunked.aggregate.json`
+  - Dataset indices: 0 through 299
+  - Examples: 300/300
+  - Contains-answer accuracy: 0.6233
+  - LongBench-style `2wikimqa` score: 12.9650
+  - Average prompt tokens: 8904.37
+  - Average latency after model load: 50.21 seconds/example
+  - Average stored/dense cache ratio: 0.2353
+- Mixed current Table-1-shaped output:
+  - `reproduce/runs/table1_llama_2wikimqa_mixed_current.{json,csv,md}`
+- Note:
+  - This table now contains complete 300/300 Full Cache and TurboQuant rows for the one locally cached LongBench-E task.
+  - It is still not a complete Table 1 reproduction because the other LongBench categories/tasks are not present locally.
+  - At current Python-level speed, full 300-example TurboQuant runs are expected to take roughly 4 hours per bit setting on one RTX 4090.
+
+## Llama LongBench 2wikimqa Complete Local Runs
+
+- Script: `experiments/longbench/run_full_cache_eval.py`
+- Loader capability:
+  - Supports one or more `arrow_files` and one or more `parquet_files` from `configs/paths.yaml`.
+  - Multiple shards are concatenated before selection/chunking, so future multi-shard LongBench caches will not silently evaluate only the first Arrow file.
+- Loader regression smoke:
+  - Command: `CUDA_VISIBLE_DEVICES=0 conda run -n turboquant python experiments/longbench/run_full_cache_eval.py --dataset-key longbench_2wikimqa --device cuda:0 --cache-mode full --max-examples 1 --progress-every 1 --output reproduce/runs/longbench_2wikimqa_loader_regression_smoke_1.jsonl`
+  - Output: `reproduce/runs/longbench_2wikimqa_loader_regression_smoke_1.{jsonl,summary.json}`
+  - Result: 1/1 answer contains, `full_dataset_len=200`, latency 2.7055 seconds after model load.
+- Shard merge helper:
+  - `scripts/merge_jsonl_by_index.py`
+- Full Cache:
+  - JSONL: `reproduce/runs/longbench_2wikimqa_full_cache_all.jsonl`
+  - Summary: `reproduce/runs/longbench_2wikimqa_full_cache_all.summary.json`
+  - Aggregate: `reproduce/runs/longbench_2wikimqa_full_cache_all.aggregate.json`
+  - Examples: 200/200
+  - Contains-answer accuracy: 0.6450
+  - LongBench-style `2wikimqa` score: 11.4448
+  - Average prompt tokens: 7168.24
+  - Average latency after model load: 2.39 seconds/example
+- TurboQuant 2.5-bit:
+  - JSONL: `reproduce/runs/longbench_2wikimqa_turboquant_2_5bit_chunked.jsonl`
+  - Aggregate: `reproduce/runs/longbench_2wikimqa_turboquant_2_5bit_chunked.aggregate.json`
+  - Shards: initial `0:17`, plus `017:109` and `109:200`; merged by `index` with no duplicates or missing records.
+  - Examples: 200/200
+  - Contains-answer accuracy: 0.4750
+  - LongBench-style `2wikimqa` score: 11.2938
+  - Average prompt tokens: 7168.24
+  - Average latency after model load: 41.26 seconds/example
+  - Average stored/dense cache ratio: 0.1729
+- TurboQuant 3.5-bit:
+  - JSONL: `reproduce/runs/longbench_2wikimqa_turboquant_3_5bit_chunked.jsonl`
+  - Aggregate: `reproduce/runs/longbench_2wikimqa_turboquant_3_5bit_chunked.aggregate.json`
+  - Shards: initial `0:16`, plus `016:108` and `108:200`; merged by `index` with no duplicates or missing records.
+  - Examples: 200/200
+  - Contains-answer accuracy: 0.6000
+  - LongBench-style `2wikimqa` score: 11.9544
+  - Average prompt tokens: 7168.24
+  - Average latency after model load: 51.48 seconds/example
+  - Average stored/dense cache ratio: 0.2355
+- Table-1-shaped output:
+  - `reproduce/runs/table1_llama_longbench_2wikimqa_current.{json,csv,md}`
+  - Full Cache MultiQA partial score: 11.44
+  - TurboQuant 2.5-bit MultiQA partial score: 11.29
+  - TurboQuant 3.5-bit MultiQA partial score: 11.95
+- Note:
+  - This is complete for the locally cached standard LongBench `2wikimqa` task only.
+  - It is still not a complete Table 1 reproduction because the other LongBench categories/tasks are not present locally.
+
+## Dataset Coverage Gap
+
+- Re-scanned local HF cache with `scripts/inventory_hf_cache.py` and direct `find`.
+- Machine-readable inventory:
+  - `reproduce/logs/hf_cache_inventory_2026-06-11.json`
+  - `reproduce/logs/hf_cache_inventory_2026-06-11_refresh.json`
+  - `reproduce/logs/hf_cache_inventory_2026-06-11_user_claim_refresh.json`
+- Human-readable audit:
+  - `reproduce/DATA_COVERAGE_AUDIT.md`
+- Strong asset audit:
+  - Script: `scripts/audit_reproduction_assets.py`
+  - JSON: `reproduce/logs/reproduction_asset_audit_2026-06-11.json`
+  - Markdown: `reproduce/logs/reproduction_asset_audit_2026-06-11.md`
+  - Result: LongBench/LongBench-E Table 1 has 2 materialized entries and 30 metadata-or-lock-only entries; Needle Figure 4 has only true 16k materialized; DBpedia 1536d/3072d are materialized.
+- Reproduction state refresh:
+  - Script: `scripts/refresh_reproduction_state.py`
+  - Summary: `reproduce/logs/reproduction_state_refresh_2026-06-11_current.{json,md}`
+  - This refresh does not run model generation. It updates LongBench/Needle path registration, asset audit, Table 1 manifest, Table 1 run plan, and Figure 4 run plan.
+  - Current refresh result: LongBench prepare 2 cached / 30 missing; Needle prepare found 16k and missed 4k/8k/32k/65k/104k; Table 1 plan 0 jobs; Figure 4 plan 0 jobs.
+- LongBench cache preparation helper:
+  - `scripts/prepare_longbench_cache.py`
+  - Local-only report: `reproduce/logs/longbench_cache_prepare_local_only_2026-06-11.json`
+  - Paths update report: `reproduce/logs/longbench_cache_prepare_update_paths_2026-06-11.json`
+  - Download attempt report: `reproduce/logs/longbench_cache_prepare_download_attempt_narrativeqa_2026-06-11.json`
+  - User-claim refresh report: `reproduce/logs/longbench_cache_prepare_user_claim_refresh_2026-06-11.json`
+  - Fresh `narrativeqa` download attempt: `reproduce/logs/longbench_cache_prepare_download_attempt_narrativeqa_user_claim_refresh_2026-06-11.json`
+  - Snapshot-aware report: `reproduce/logs/longbench_cache_prepare_snapshot_aware_2026-06-11.json`
+  - Snapshot probe report: `reproduce/logs/longbench_cache_prepare_snapshot_probe_2026-06-11.json`
+  - Snapshot-only probe report: `reproduce/logs/longbench_cache_prepare_snapshot_only_probe_2026-06-11.json`
+- Table 1 runnable manifest:
+  - `scripts/build_table1_manifest.py`
+  - Report: `reproduce/logs/table1_manifest_2026-06-11.json`
+  - Refresh report: `reproduce/logs/table1_manifest_user_claim_refresh_2026-06-11.json`
+  - Snapshot-aware report: `reproduce/logs/table1_manifest_snapshot_aware_2026-06-11.json`
+  - Current manifest status: 6 complete entries, 90 missing-dataset entries.
+- Table 1 run planner:
+  - Script: `scripts/plan_table1_runs.py`
+  - Current plan: `reproduce/logs/table1_run_plan_current_2026-06-11.{json,md,sh}`
+  - Current plan has 0 new planned jobs because all materialized local Table 1 entries are already complete and the remaining entries are missing-dataset.
+  - Rechunk demo plan: `reproduce/logs/table1_run_plan_complete_rechunk_demo_2026-06-11.{json,md,sh}` validates 4 x 50-example GPU-sharded commands, shard merge, and aggregate generation for `longbench_2wikimqa` TurboQuant 2.5-bit.
+- Local LongBench cache currently includes only:
+  - `Xnhyacinth/LongBench-e`, config `2wikimqa`, test split, 300 examples.
+  - `Xnhyacinth/LongBench`, config `2wikimqa`, test split, 200 examples.
+- Local Needle cache currently includes:
+  - `ameyhengle/Multilingual-Needle-in-a-Haystack`, config `16k`, languages ar/de/en/es/hi/vi/zh.
+- Local DBpedia cache currently includes:
+  - Qdrant DBpedia OpenAI3 1536d, train split, 1,000,000 examples.
+  - Qdrant DBpedia OpenAI3 3072d, train split, 1,000,000 examples.
+- This is enough to validate the Llama full-cache/TurboQuant pipeline on the two locally cached `2wikimqa` variants.
+- It is not enough to reproduce the complete Table 1 category averages yet.
+- Remaining LongBench / LongBench-E tasks need to be cached before final Table 1 reproduction.
+- Attempted `Xnhyacinth/LongBench` `narrativeqa` download with `--download-missing`; it did not add data because only cached config `2wikimqa` is available and Hugging Face Hub is not reachable from the current environment.
+  - Reported error: `ValueError: Couldn't find cache for Xnhyacinth/LongBench for config 'narrativeqa'; Available configs in the cache: ['2wikimqa']`.
+- Repeated the `narrativeqa` check after the user data-availability note; it again did not add data and reported only cached config `2wikimqa`.
+- Snapshot-aware scan found LongBench/LongBench-E `2wikimqa` parquet files under `/home/liying/.cache/huggingface/hub`, but no additional Table 1 task data.
+- Snapshot-only probe with an empty project-local cache root found `2wikimqa` from Hub snapshot parquet files, confirming the fallback path works; `narrativeqa` remained missing.
+
+## LongBench Scoring and Table 1 Aggregation
+
+- Implementation:
+  - `turboquant/longbench_metrics.py`
+  - `scripts/summarize_jsonl_accuracy.py`
+  - `scripts/backfill_longbench_scores.py`
+  - `scripts/build_table1_summary.py`
+  - `scripts/merge_jsonl_by_index.py`
+  - `scripts/prepare_longbench_cache.py`
+  - `scripts/build_table1_manifest.py`
+  - `scripts/plan_table1_runs.py`
+- `run_full_cache_eval.py` now writes:
+  - `longbench_dataset`
+  - `longbench_category`
+  - `longbench_score`
+- `scripts/build_table1_summary.py` now computes category scores dataset-first: each dataset is averaged first, then category means are computed over available datasets. This avoids sample-count weighting when multiple LongBench datasets are combined.
+- Available-output Table-1-shaped summary:
+  - JSON: `reproduce/runs/table1_llama_available_summary.json`
+  - CSV: `reproduce/runs/table1_llama_available_summary.csv`
+  - Markdown: `reproduce/runs/table1_llama_available_summary.md`
+  - Current coverage is only MultiQA `2wikimqa`; empty categories still indicate missing datasets.
+- Current partial Table-1-shaped output:
+  - JSON: `reproduce/runs/table1_llama_partial.json`
+  - CSV: `reproduce/runs/table1_llama_partial.csv`
+  - Markdown: `reproduce/runs/table1_llama_partial.md`
+- Current local `2wikimqa_e` output with complete Full Cache and TurboQuant rows:
+  - JSON: `reproduce/runs/table1_llama_partial_current.json`
+  - CSV: `reproduce/runs/table1_llama_partial_current.csv`
+  - Markdown: `reproduce/runs/table1_llama_partial_current.md`
+  - Full Cache MultiQA partial score from 300-example `2wikimqa_e`: 11.25
+  - TurboQuant 2.5-bit MultiQA partial score from 300-example `2wikimqa_e`: 12.24
+  - TurboQuant 3.5-bit MultiQA partial score from 300-example `2wikimqa_e`: 12.96
+- Current mixed `2wikimqa` output with complete Full Cache and complete TurboQuant local-task rows:
+  - Markdown: `reproduce/runs/table1_llama_2wikimqa_mixed_current.md`
+  - Full Cache MultiQA partial score from 300-example `2wikimqa_e`: 11.25
+  - TurboQuant 2.5-bit MultiQA partial score from 300-example `2wikimqa_e`: 12.24
+  - TurboQuant 3.5-bit MultiQA partial score from 300-example `2wikimqa_e`: 12.96
+- Current standard LongBench `2wikimqa` output with complete Full Cache and TurboQuant rows:
+  - Markdown: `reproduce/runs/table1_llama_longbench_2wikimqa_current.md`
+  - Full Cache MultiQA partial score from 200-example `2wikimqa`: 11.44
+  - TurboQuant 2.5-bit MultiQA partial score from 200-example `2wikimqa`: 11.29
+  - TurboQuant 3.5-bit MultiQA partial score from 200-example `2wikimqa`: 11.95
+- This validates the local Full Cache vs TurboQuant reproduction path on both currently cached `2wikimqa` variants. It is not a completed Table 1 reproduction because complete LongBench task coverage is still missing.
+
+## TurboQuant Packed KV Cache
+
+- Implementation:
+  - `turboquant/kv_cache.py`
+  - `TurboQuantDynamicCache`
+  - `pack_indices` / `unpack_indices`
+  - packed `uint8` TurboQuantMSE index segments plus per-vector norms
+  - fractional effective-bit outlier segments for non-integer `--kv-bits`
+- Integration:
+  - `experiments/longbench/run_full_cache_eval.py`
+  - `--cache-mode full`
+  - `--cache-mode turboquant --kv-bits <bits>`
+- Unit test:
+  - `conda run -n turboquant python -m pytest tests/test_core.py -q`
+  - Result: 6 passed
+- Smoke output:
+  - JSONL: `reproduce/runs/longbench_turboquant_packed_cache_smoke_1_3bit.jsonl`
+  - Summary: `reproduce/runs/longbench_turboquant_packed_cache_smoke_1_3bit.summary.json`
+  - Aggregate: `reproduce/runs/longbench_turboquant_packed_cache_smoke_1_3bit.aggregate.json`
+- Result:
+  - Model: Llama-3.1-8B-Instruct
+  - Dataset: LongBench-E `2wikimqa`
+  - Examples: 1
+  - KV mode: TurboQuant packed cache, 3-bit integer setting
+  - Contains-answer accuracy: 1.0
+  - Prompt tokens: 4194
+  - Generated tokens: 52
+  - Latency after model load: 30.88 seconds
+  - Stored cache bytes: 108,672,000
+  - Dense materialized KV bytes: 556,400,640
+  - Stored/dense ratio: 0.1953125
+- Fractional 2.5-bit smoke output:
+  - JSONL: `reproduce/runs/longbench_turboquant_packed_cache_smoke_1_2_5bit.jsonl`
+  - Summary: `reproduce/runs/longbench_turboquant_packed_cache_smoke_1_2_5bit.summary.json`
+  - Aggregate: `reproduce/runs/longbench_turboquant_packed_cache_smoke_1_2_5bit.aggregate.json`
+- Fractional 2.5-bit smoke result:
+  - Model: Llama-3.1-8B-Instruct
+  - Dataset: LongBench-E `2wikimqa`
+  - Examples: 1
+  - KV mode: TurboQuant packed cache, 2.5-bit effective outlier setting
+  - Contains-answer accuracy: 1.0
+  - Prompt tokens: 4194
+  - Generated tokens: 52
+  - Latency after model load: 47.97 seconds
+  - Stored cache bytes: 96,483,328
+  - Dense materialized KV bytes: 556,400,640
+  - Stored/dense ratio: 0.17340621319199057
+  - Compression summary: effective index bits 2.5, outlier policy `dynamic_absmean`, outlier counts `[64]`, regular bits `[2]`, outlier bits `[3]`
+- Fractional 3.5-bit smoke output:
+  - JSONL: `reproduce/runs/longbench_turboquant_packed_cache_smoke_1_3_5bit.jsonl`
+  - Summary: `reproduce/runs/longbench_turboquant_packed_cache_smoke_1_3_5bit.summary.json`
+  - Aggregate: `reproduce/runs/longbench_turboquant_packed_cache_smoke_1_3_5bit.aggregate.json`
+- Fractional 3.5-bit smoke result:
+  - Model: Llama-3.1-8B-Instruct
+  - Dataset: LongBench-E `2wikimqa`
+  - Examples: 1
+  - KV mode: TurboQuant packed cache, 3.5-bit effective outlier setting
+  - Contains-answer accuracy: 1.0
+  - Prompt tokens: 4194
+  - Generated tokens: 52
+  - Latency after model load: 55.54 seconds
+  - Stored cache bytes: 131,258,368
+  - Dense materialized KV bytes: 556,400,640
+  - Stored/dense ratio: 0.23590621319199057
+  - Compression summary: effective index bits 3.5, outlier policy `dynamic_absmean`, outlier counts `[64]`, regular bits `[3]`, outlier bits `[4]`
+- Current limitation:
+  - This is a Python-level reproduction cache. It stores packed indices and norms internally, then materializes dequantized K/V tensors for each attention call.
+  - The storage ratio includes fp norms. For 3-bit integer quantization on the smoke example, the measured stored/dense ratio is about 19.5%.
+  - The smoke latency is slower than full cache because the implementation repeatedly dequantizes in Python and does not use a fused attention/cache kernel.
+  - For fractional bits, the current reproducible rule selects outlier channels dynamically by per-segment absolute-mean magnitude and assigns `floor(bits)` to regular channels and `ceil(bits)` to outlier channels.
+  - For Llama head dimension 128, this means 2.5-bit uses 64 regular channels at 2-bit and 64 outlier channels at 3-bit; 3.5-bit uses 64 regular channels at 3-bit and 64 outlier channels at 4-bit.
+  - The paper text says its 2.5-bit example uses 32 outlier channels at 3-bit and 96 channels at 2-bit, but that arithmetic gives 2.25 bits/channel, not 2.5. The current implementation prioritizes matching the reported effective KV size.
+
+## Needle-In-A-Haystack Figure 4 Pipeline
+
+- Implementation:
+  - `experiments/needle/run_needle_eval.py`
+  - `scripts/summarize_needle_results.py`
+  - `scripts/build_figure4_needle_summary.py`
+  - `scripts/build_needle_length_grid.py`
+  - `scripts/build_needle_heatmap.py`
+  - `scripts/plan_figure4_runs.py`
+- Figure 4 run planner:
+  - Current plan: `reproduce/logs/figure4_run_plan_current_2026-06-11.{json,md,sh}`
+  - Current status: 2 complete entries and 10 missing-dataset entries for EN 4k/8k/16k/32k/65k/104k x Full-Precision/TurboQuant.
+  - Current plan has 0 new planned jobs because the local materialized 16k Full-Precision and TurboQuant runs are already complete.
+  - Replay demo: `reproduce/logs/figure4_run_plan_16k_replay_demo_2026-06-11.{json,md,sh}` plans non-overwriting 16k replay outputs with `replay_demo` suffix.
+- Available-output heatmap:
+  - JSON: `reproduce/runs/figure4_needle_available_heatmap.json`
+  - CSV: `reproduce/runs/figure4_needle_available_heatmap.csv`
+  - Markdown: `reproduce/runs/figure4_needle_available_heatmap.md`
+  - PNG: `reproduce/runs/figure4_needle_available_heatmap.png`
+  - Current coverage is only the materialized local 16k EN 24-example grid; missing token limits remain absent.
+- Local dataset:
+  - `needle_16k_en`
+  - Arrow: `/home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869/multilingual-needle-in-a-haystack-en.arrow`
+  - Rows: 2400
+  - Positions: start/middle/end, 800 rows each
+  - Prompt tokens in first 20 examples: about 9.8k-11.7k with Llama tokenizer
+- Full-Precision smoke:
+  - JSONL: `reproduce/runs/needle_full_precision_smoke_1.jsonl`
+  - Aggregate: `reproduce/runs/needle_full_precision_smoke_1.aggregate.json`
+  - Result: 1/1 answer contains, prompt tokens 10928
+- Full-Precision balanced position smoke:
+  - JSONL: `reproduce/runs/needle_full_precision_position_balanced_smoke_3.jsonl`
+  - Aggregate: `reproduce/runs/needle_full_precision_position_balanced_smoke_3.aggregate.json`
+  - Result: 3/3 answer contains, covering start/middle/end
+- TurboQuant 2.5-bit smoke:
+  - JSONL: `reproduce/runs/needle_turboquant_2_5bit_smoke_1.jsonl`
+  - Aggregate: `reproduce/runs/needle_turboquant_2_5bit_smoke_1.aggregate.json`
+  - Result: 1/1 answer contains, prompt tokens 10928
+  - Stored cache bytes: 247,408,640
+  - Dense materialized KV bytes: 1,436,418,048
+  - Stored/dense ratio: 0.17223999680627794
+- Local 16k 24-example grid:
+  - Full-Precision JSONL: `reproduce/runs/needle_16k_full_precision_grid_24.jsonl`
+  - Full-Precision aggregate: `reproduce/runs/needle_16k_full_precision_grid_24.aggregate.json`
+  - TurboQuant 2.5-bit JSONL: `reproduce/runs/needle_16k_turboquant_2_5bit_grid_24.jsonl`
+  - TurboQuant 2.5-bit aggregate: `reproduce/runs/needle_16k_turboquant_2_5bit_grid_24.aggregate.json`
+  - Summary: `reproduce/runs/figure4_needle_16k_local_summary.{json,csv,md}`
+  - Heatmap artifacts: `reproduce/runs/figure4_needle_16k_local_heatmap.{json,csv,md,png}`
+  - Grid coverage: start/middle/end x 8 distractor languages x 1 example = 24 examples per method.
+- Local 16k 24-example result:
+  - Full-Precision answer-contains accuracy: 1.0000
+  - Full-Precision average prompt tokens: 8927.125
+  - Full-Precision average latency: 2.1109 seconds/example
+  - TurboQuant 2.5-bit answer-contains accuracy: 1.0000
+  - TurboQuant 2.5-bit average prompt tokens: 8927.125
+  - TurboQuant 2.5-bit average latency: 20.2780 seconds/example
+  - TurboQuant 2.5-bit average stored/dense cache ratio: 0.172302
+  - By position, both methods scored 1.0000 on start, middle, and end groups.
+- Generated local length-grid data:
+  - Full grid Arrow: `reproduce/generated_data/needle_length_grid/needle_generated_length_grid_en.arrow`
+  - Full grid report: `reproduce/logs/needle_length_grid_report_2026-06-11.json`
+  - Smoke grid Arrow: `reproduce/generated_data/needle_length_grid_smoke/needle_generated_length_grid_en_smoke.arrow`
+  - Smoke grid report: `reproduce/logs/needle_length_grid_smoke_report_2026-06-11.json`
+  - `configs/paths.yaml` dataset keys: `needle_generated_length_grid_en` and `needle_generated_length_grid_en_smoke`
+  - Full grid target tokens: 4096, 8192, 16384, 32768, 65536, 104000
+  - Full grid examples: 144 = 6 target lengths x 3 positions x 8 distractor languages x 1 example
+  - `run_needle_eval.py` now supports `--target-prompt-tokens` for per-length evaluation.
+- Local Needle 16k multi-split cache:
+  - Prepare report: `reproduce/logs/needle_cache_prepare_2026-06-11.json`
+  - Multi-config report: `reproduce/logs/needle_cache_prepare_all_configs_2026-06-11.json`
+  - Multi-config update-paths report: `reproduce/logs/needle_cache_prepare_all_configs_update_paths_2026-06-11.json`
+  - Multi-config scan found `16k` and did not find `4k`, `8k`, `32k`, `65k`, or `104k`.
+  - Dataset keys: `needle_16k_ar`, `needle_16k_de`, `needle_16k_en`, `needle_16k_es`, `needle_16k_hi`, `needle_16k_vi`, `needle_16k_zh`, `needle_16k_all`
+  - Examples: 2400 per language split, 16800 for `needle_16k_all`
+  - Multi-Arrow loading support was added to `experiments/needle/run_needle_eval.py` and `scripts/build_needle_length_grid.py`.
+  - Loading smoke JSONL: `reproduce/runs/needle_16k_all_full_precision_smoke_3.jsonl`
+  - Loading smoke aggregate: `reproduce/runs/needle_16k_all_full_precision_smoke_3.aggregate.json`
+  - The smoke validates multi-Arrow loading only; it is not used as an accuracy benchmark because exact substring scoring is not appropriate for the first Arabic-answer examples.
+- Generated local 4k diagnostic slice:
+  - Full-Precision JSONL: `reproduce/runs/needle_generated_4k_full_precision.jsonl`
+  - Full-Precision aggregate: `reproduce/runs/needle_generated_4k_full_precision.aggregate.json`
+  - TurboQuant 2.5-bit JSONL: `reproduce/runs/needle_generated_4k_turboquant_2_5bit.jsonl`
+  - TurboQuant 2.5-bit aggregate: `reproduce/runs/needle_generated_4k_turboquant_2_5bit.aggregate.json`
+  - Summary: `reproduce/runs/figure4_needle_generated_4k_summary.{json,csv,md}`
+  - Heatmap artifacts: `reproduce/runs/figure4_needle_generated_4k_heatmap.{json,csv,md,png}`
+  - Grid coverage: target 4096 prompt tokens, start/middle/end x 8 distractor languages x 1 example = 24 examples per method.
+- Figure-4-style heatmap builder:
+  - Script: `scripts/build_needle_heatmap.py`
+  - The script groups JSONL runs by inferred token limit and depth percent, writes JSON/CSV/Markdown, and can render a PNG heatmap.
+  - For local 16k runs, inferred token buckets are 8192 and 16384 because the actual prompts in the selected examples are about 7.5k or 9.8k tokens.
+  - For generated 4k runs, the token bucket is 4096 from `target_prompt_tokens`.
+- Generated local 4k diagnostic result:
+  - Full-Precision answer-contains accuracy: 0.3333
+  - Full-Precision average prompt tokens: 4095.875
+  - Full-Precision average latency: 1.2047 seconds/example
+  - TurboQuant 2.5-bit answer-contains accuracy: 0.3333
+  - TurboQuant 2.5-bit average prompt tokens: 4095.875
+  - TurboQuant 2.5-bit average latency: 20.0630 seconds/example
+  - TurboQuant 2.5-bit average stored/dense cache ratio: 0.172844
+  - By position, both methods scored 1.0000 on middle and 0.0000 on start/end.
+- Current limitation:
+  - This validates the local 16k Needle pipeline and a small balanced local grid only.
+  - The paper Figure 4 spans roughly 4k to 104k token limits. The generated local grid provides a runnable per-length pipeline, but because the source cache only exposes the `16k` config, target lengths above the source prompt length cannot become true 32k/65k/104k contexts.
+  - The generated 4k slice is diagnostic only: Full-Precision itself scores 0.3333 after cropping from 16k source prompts, so it cannot be used as a paper Figure 4 replacement.
+
+## ANN Search Figure 5 and Table 2 Pipeline
+
+## TurboQuant KV Compression Policy Summary
+
+- Script: `scripts/summarize_kv_compression.py`
+- Artifacts: `reproduce/runs/kv_compression_policy_summary.{json,csv,md}`
+- Covered runs:
+  - LongBench-E `2wikimqa` TurboQuant 2.5-bit / 3.5-bit
+  - LongBench `2wikimqa` TurboQuant 2.5-bit / 3.5-bit
+  - Needle 16k TurboQuant 2.5-bit
+  - Generated Needle 4k TurboQuant 2.5-bit
+- Current 2.5-bit policy evidence:
+  - `outlier_policy`: `dynamic_absmean`
+  - regular bits: 2
+  - outlier bits: 3
+  - outlier channels: 64 per 128-channel head
+  - average effective index bits: 2.5000
+- Current 3.5-bit policy evidence:
+  - `outlier_policy`: `dynamic_absmean`
+  - regular bits: 3
+  - outlier bits: 4
+  - outlier channels: 64 per 128-channel head
+  - average effective index bits: 3.5000
+- Note:
+  - This confirms the implementation matches the reported KV Size values. It intentionally differs from the paper text example claiming 32 channels at 3-bit and 96 channels at 2-bit equals 2.5-bit; that arithmetic equals 2.25-bit.
+
+- Implementation:
+  - `experiments/ann_search/run_turboquant_ann.py`
+  - `scripts/benchmark_quantization_time.py`
+  - `scripts/build_ann_summary.py`
+  - `scripts/plot_figure5_dbpedia.py`
+  - `scripts/build_table2_summary.py`
+- Local DBpedia schemas:
+  - `dbpedia_openai3_1536`: column `text-embedding-3-large-1536-embedding`
+  - `dbpedia_openai3_3072`: column `text-embedding-3-large-3072-embedding`
+- ANN smoke outputs:
+  - `reproduce/runs/ann_dbpedia_1536_smoke.json`
+  - `reproduce/runs/ann_dbpedia_1536_smoke.csv`
+  - `reproduce/runs/ann_dbpedia_3072_smoke.json`
+  - `reproduce/runs/ann_dbpedia_3072_smoke.csv`
+- ANN smoke settings:
+  - 1536d: database 2048, queries 128, bits 2 and 4
+  - 3072d: database 1024, queries 64, bits 2 and 4
+  - Top-k: 1, 2, 4, 8, 16, 32, 64
+- ANN smoke results:
+  - 1536d 2-bit: recall 1@1 = 0.9141, recall 1@64 = 1.0
+  - 1536d 4-bit: recall 1@1 = 0.9922, recall 1@64 = 1.0
+  - 3072d 2-bit: recall 1@1 = 0.8750, recall 1@64 = 1.0
+  - 3072d 4-bit: recall 1@1 = 0.9844, recall 1@64 = 1.0
+- ANN full-scale DBpedia outputs:
+  - `reproduce/runs/ann_dbpedia_1536_fullscale_100k_1k.json`
+  - `reproduce/runs/ann_dbpedia_1536_fullscale_100k_1k.csv`
+  - `reproduce/runs/ann_dbpedia_3072_fullscale_100k_1k.json`
+  - `reproduce/runs/ann_dbpedia_3072_fullscale_100k_1k.csv`
+  - Summary: `reproduce/runs/figure5_turboquant_dbpedia_fullscale.{json,csv,md}`
+  - Plot: `reproduce/runs/figure5_turboquant_dbpedia_fullscale.png`
+  - Plot PDF: `reproduce/runs/figure5_turboquant_dbpedia_fullscale.pdf`
+- ANN full-scale settings:
+  - Database: 100,000
+  - Queries: 1,000
+  - Top-k: 1, 2, 4, 8, 16, 32, 64
+  - Bits: 2 and 4
+- ANN full-scale DBpedia results:
+  - 1536d 2-bit: recall 1@1 = 0.900, 1@2 = 0.973, 1@4 = 0.998, 1@8+ = 1.0
+  - 1536d 4-bit: recall 1@1 = 0.966, 1@2 = 0.996, 1@4+ = 1.0
+  - 3072d 2-bit: recall 1@1 = 0.904, 1@2 = 0.984, 1@4 = 0.998, 1@8+ = 1.0
+  - 3072d 4-bit: recall 1@1 = 0.973, 1@2 = 0.999, 1@4+ = 1.0
+- Table 2-style timing smoke:
+  - JSON: `reproduce/runs/table2_quantization_time_smoke.json`
+  - CSV: `reproduce/runs/table2_quantization_time_smoke.csv`
+  - Summary: `reproduce/runs/table2_quantization_time_summary.{json,csv,md}`
+  - Settings: 2048 vectors, 4-bit, 5 warmup, 20 repeats, GPU `cuda:0`
+  - d=200 random-unit vectors: 0.000147 seconds mean
+  - d=1536 DBpedia vectors: 0.001425 seconds mean
+  - d=3072 DBpedia vectors: 0.003256 seconds mean
+  - Compared with paper TurboQuant timing, local/paper ratios are:
+    - d=200: 0.21x, but local uses random-unit vectors because GloVe is unavailable
+    - d=1536: 1.10x
+    - d=3072: 1.55x
+- Current limitation:
+  - DBpedia Figure 5 TurboQuant curves are now run at paper scale.
+  - GloVe 200d is still not available, so d=200 timing currently uses random unit vectors and Figure 5 GloVe recall is not reproduced.
+  - The current ANN implementation dequantizes vectors before scoring. This validates TurboQuant recall behavior but is not an optimized compressed-domain ANN kernel.

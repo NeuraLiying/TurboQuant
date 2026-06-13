@@ -1,0 +1,295 @@
+{
+  "name": "turboquant_reproduction",
+  "status": "fixed_reproduction_snapshot",
+  "created_at": "2026-06-13 18:39:34 CST",
+  "project_root": "/home/liying/projects/turboquant",
+  "scope": "TurboQuant Table 1 reproduction version for Full Cache and TurboQuant on Llama-3.1-8B-Instruct",
+  "default_turboquant_config": {
+    "key_quantizer": "mse",
+    "value_quantizer": "mse",
+    "effective_bit_allocation": "blend",
+    "quantize_prefill": true,
+    "quantize_decode": true
+  },
+  "table1_average_results": {
+    "full_cache": {
+      "local": 50.38,
+      "paper": 50.06
+    },
+    "turboquant_2_5bit": {
+      "local": 45.42,
+      "paper": 49.44
+    },
+    "turboquant_3_5bit": {
+      "local": 49.38,
+      "paper": 50.06
+    }
+  },
+  "primary_artifacts": [
+    "reproduce/TABLE1_OFFICIAL_COMPARISON.md",
+    "reproduce/REPRODUCTION_AUDIT_2026-06-13.md"
+  ],
+  "num_files": 52,
+  "files": [
+    {
+      "path": "turboquant/__init__.py",
+      "sha256": "48b8bc4d60007a46c2b260eb2781ffb2724eaf3f9115c53a64dd901db15fa041",
+      "size": 206
+    },
+    {
+      "path": "turboquant/codebook.py",
+      "sha256": "f86dc87ff8738259669f7a7b6ce11a05821d3005cbc0d98cd38a3f9573b83b2c",
+      "size": 4365
+    },
+    {
+      "path": "turboquant/core.py",
+      "sha256": "49b4ca82572487e3a7eb32f41f16d82659da4fa112493c40fbbef58eca061e84",
+      "size": 5326
+    },
+    {
+      "path": "turboquant/kv_cache.py",
+      "sha256": "96b296957d726eafb498890796dd853b690e7ecf88b860659b4cef416760be50",
+      "size": 29258
+    },
+    {
+      "path": "turboquant/longbench_metrics.py",
+      "sha256": "502431d156a7fc08e2ab67ed7962c36c82caf27ff89cc1207154d6579efc9e18",
+      "size": 6876
+    },
+    {
+      "path": "turboquant/longbench_prompts.py",
+      "sha256": "333703578d0c24982dfd8a4df07b4e0920e9f23b8484eee46185e0b0be9bde0b",
+      "size": 7795
+    },
+    {
+      "path": "experiments/ann_search/run_turboquant_ann.py",
+      "sha256": "c80a61388a84b0b82e812fadd318b69557309befd6f9c33143fdfbf34b32ddd8",
+      "size": 8721
+    },
+    {
+      "path": "experiments/longbench/run_full_cache_eval.py",
+      "sha256": "a9f771c53a40cf48411bdf217d2f822fc072955ae8bb93b9ebb6ce5a94d1f582",
+      "size": 16654
+    },
+    {
+      "path": "experiments/longbench/run_full_cache_smoke.py",
+      "sha256": "6dda1ce1cb44279da03e4bcb71ac9337c57b8ee2918c24d65cb603b14fc6810a",
+      "size": 5381
+    },
+    {
+      "path": "experiments/longbench/run_kv_cache_smoke.py",
+      "sha256": "f722c19d8ec05059794385f34ee8e3e9a3f0a6953ac74099ff15c58e232d1d8d",
+      "size": 1629
+    },
+    {
+      "path": "experiments/needle/run_needle_eval.py",
+      "sha256": "ed10a4fe3e5c57707c6d96ad7659a3715daab7675aac81f06cf29428ba259b74",
+      "size": 10688
+    },
+    {
+      "path": "scripts/audit_reproduction_assets.py",
+      "sha256": "aba2305b3af761b79babac1cc37f17e4c109aac4c2e4ece05715a5bc345a8958",
+      "size": 14593
+    },
+    {
+      "path": "scripts/backfill_longbench_scores.py",
+      "sha256": "9013af33373500f3b281ef8404f1f3c458ac5214a3d101fff67ee366ad95f29d",
+      "size": 1815
+    },
+    {
+      "path": "scripts/benchmark_quantization_time.py",
+      "sha256": "aa268922516a14bb5b20c051da394beab4724dcad89658bdd3cbf74d5b441ba8",
+      "size": 4888
+    },
+    {
+      "path": "scripts/build_ann_summary.py",
+      "sha256": "869927527502d31c4c4d401ee4819f4587bca4a6d4b55c8c195a28ab457ab9f5",
+      "size": 2819
+    },
+    {
+      "path": "scripts/build_figure4_needle_summary.py",
+      "sha256": "6b83b1593dd7cac6549a57df1571d6bf66656f1b5a6f7ce30516f50d146d488d",
+      "size": 6136
+    },
+    {
+      "path": "scripts/build_first_stage_report.py",
+      "sha256": "199a51fac48c1c1f8fb7d6ebda0c5439e980cb167a307876df5ef69e9c5df360",
+      "size": 14207
+    },
+    {
+      "path": "scripts/build_needle_heatmap.py",
+      "sha256": "363b0a7edb3da289e629bbdd7e56798ac3ad9663995070a34e6e58725b5b3cb7",
+      "size": 9746
+    },
+    {
+      "path": "scripts/build_needle_length_grid.py",
+      "sha256": "b8bf3e25294a4ad79e13d4442aaf3053af2b1e8bd4d215ecca12885f5fbc30da",
+      "size": 10386
+    },
+    {
+      "path": "scripts/build_table1_manifest.py",
+      "sha256": "bd87e441aadef9ffa2189ac7a07403d456a9094a9df214e651ce15c2d32e96aa",
+      "size": 6020
+    },
+    {
+      "path": "scripts/build_table1_official_comparison.py",
+      "sha256": "55e3d24a0a854904d60b9d9b79899080d5c3ae58440ae8f76c3f1b0083cbf546",
+      "size": 9994
+    },
+    {
+      "path": "scripts/build_table1_summary.py",
+      "sha256": "1686ea6ca3f9c000a46e282e6dbab25a43cfb4b91dfe1caa63d81b397b08d114",
+      "size": 5978
+    },
+    {
+      "path": "scripts/build_table2_summary.py",
+      "sha256": "d9a5369e0a7e82aa09b8022451a1298a4d98ee4263bafb7b5d9d2898aef68757",
+      "size": 3128
+    },
+    {
+      "path": "scripts/finalize_table1_when_done.py",
+      "sha256": "4c4644f1581e5f6c7fa32219eefab416f3e4fff3562a73b1d26024fb02f4c124",
+      "size": 6284
+    },
+    {
+      "path": "scripts/inspect_assets.py",
+      "sha256": "c12d6470245a625ed1a9782ff6873568fec406797c23fb9d0f1ce9f13c0599b8",
+      "size": 5538
+    },
+    {
+      "path": "scripts/inventory_hf_cache.py",
+      "sha256": "099b10371b3759fc36a398b9194d7241ceb2ee8a7353e7af4e4fd8d99a486506",
+      "size": 3376
+    },
+    {
+      "path": "scripts/launch_table1_turboquant_job.sh",
+      "sha256": "9bb3269a8845f396e1ec04dcca40fc10a0f82b2896f081ab1487dc873d765f01",
+      "size": 1809
+    },
+    {
+      "path": "scripts/merge_jsonl_by_index.py",
+      "sha256": "4bffb3f590ef31cbdcb0d5743195047ff7db5ed76f5beb05c21a79d39efb81f9",
+      "size": 2321
+    },
+    {
+      "path": "scripts/plan_figure4_runs.py",
+      "sha256": "713fdd1c4df173d2706f2f6f9fc4487437cc7296b087368b76c666a5a1df9866",
+      "size": 18860
+    },
+    {
+      "path": "scripts/plan_table1_runs.py",
+      "sha256": "58cfaddd56ef4683dcaa45ea1047f1a2055b0c96889739c741a658472fd61775",
+      "size": 15524
+    },
+    {
+      "path": "scripts/plot_figure5_dbpedia.py",
+      "sha256": "6557b7949168153a90b106231058869cbcdfb2e1cded561ff33f3bf7694b5483",
+      "size": 2933
+    },
+    {
+      "path": "scripts/prepare_longbench_cache.py",
+      "sha256": "997b6c3aeeb6c78887c6820267d4fe55e952f0753b57866a02765e87b512b18c",
+      "size": 10760
+    },
+    {
+      "path": "scripts/prepare_needle_cache.py",
+      "sha256": "a87b1b0150b2f772b53b150e234d8c067a8a68b348c4c02d37f63d8ec61eaddf",
+      "size": 6996
+    },
+    {
+      "path": "scripts/probe_raw_data_assets.py",
+      "sha256": "ca1c88fa3ae1323d058b4d13db3bc8c7473f0d104bffb8cb3608cc5c988fc609",
+      "size": 11196
+    },
+    {
+      "path": "scripts/queue_table1_turboquant_jobs.py",
+      "sha256": "e82abb3258c6b1d806aa62e09deb36b238a1c7bfe06e7d5927be13cd0fe8ee89",
+      "size": 14187
+    },
+    {
+      "path": "scripts/recompute_table1_official_metrics.py",
+      "sha256": "ddf7df7d0d69e5e4d235191dd26481c1cc360132a9713ea8247da115bccc3ce4",
+      "size": 1910
+    },
+    {
+      "path": "scripts/refresh_reproduction_state.py",
+      "sha256": "e6acde948579a137fc22617e7f5571eb8b108c5cf59d45bd2e3d5fee3d92633a",
+      "size": 9188
+    },
+    {
+      "path": "scripts/run_table1_full_cache_parallel.sh",
+      "sha256": "43345a85c2ccb5f1dd870f507568000b8849c82b966966758e8f7dbf80ec7528",
+      "size": 3114
+    },
+    {
+      "path": "scripts/summarize_jsonl_accuracy.py",
+      "sha256": "f72f2c6966de9d9864177e7debef332fc66d3f9dbb161e9c52e6b5c69cec7488",
+      "size": 5148
+    },
+    {
+      "path": "scripts/summarize_kv_compression.py",
+      "sha256": "778044160fea07f3e5f129d4b9570743adef60e7c74ffb8e2c8cbd7f03606352",
+      "size": 6878
+    },
+    {
+      "path": "scripts/summarize_needle_results.py",
+      "sha256": "868d114f2b568b6dda3358ccde5b7448749615b313f9686d6d346f08d403ef42",
+      "size": 3578
+    },
+    {
+      "path": "scripts/summarize_table1_method_progress.py",
+      "sha256": "c65ac0c2a9932c61f4242baa65079b590a5d3891480f2c36e93cd107b2ddc574",
+      "size": 5966
+    },
+    {
+      "path": "scripts/summarize_table1_official_progress.py",
+      "sha256": "f1d50b0828d0f3dee6a08ae291a8404c05f0090012c40666c5dd392e87cf9a00",
+      "size": 5216
+    },
+    {
+      "path": "scripts/validate_figure3_core.py",
+      "sha256": "d958ed87e5c15a7b80999fd3f639579af967561f8ae389f01245078e64b0b776",
+      "size": 4221
+    },
+    {
+      "path": "tests/.pytest_cache/.gitignore",
+      "sha256": "3ed731b65d06150c138e2dadb0be0697550888a6b47eb8c45ecc9adba8b8e9bd",
+      "size": 37
+    },
+    {
+      "path": "tests/.pytest_cache/CACHEDIR.TAG",
+      "sha256": "37dc88ef9a0abeddbe81053a6dd8fdfb13afb613045ea1eb4a5c815a74a3bde4",
+      "size": 191
+    },
+    {
+      "path": "tests/.pytest_cache/README.md",
+      "sha256": "73fd6fccdd802c419a6b2d983d6c3173b7da97558ac4b589edec2dfe443db9ad",
+      "size": 302
+    },
+    {
+      "path": "tests/.pytest_cache/v/cache/nodeids",
+      "sha256": "b296ff70535a348ec95254d405dafbf7bf3d7efd10523f39df728a4852027029",
+      "size": 103
+    },
+    {
+      "path": "tests/.pytest_cache/v/cache/stepwise",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "size": 2
+    },
+    {
+      "path": "tests/test_core.py",
+      "sha256": "d5c1b578a91a244c2169b3839b5456cb2f84d26da336f25b1e70545ea744076f",
+      "size": 6748
+    },
+    {
+      "path": "configs/llama_first.yaml",
+      "sha256": "cac4ee853187462ec2b42dca9d5f6d14daef85062990368477e4169bfb67214d",
+      "size": 883
+    },
+    {
+      "path": "configs/paths.yaml",
+      "sha256": "0397fc2c732faa7c9ef5b02b799728100a96140d6c8fff9020d683663341224c",
+      "size": 18305
+    }
+  ]
+}

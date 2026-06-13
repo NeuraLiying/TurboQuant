@@ -1,0 +1,1439 @@
+{
+  "generated_at": "2026-06-11T09:14:39+08:00",
+  "sources": {
+    "refresh": "/home/liying/projects/turboquant/reproduce/logs/reproduction_state_refresh_goal_resume_paths_fixed_2026_06_11.json",
+    "table1_summary": "/home/liying/projects/turboquant/reproduce/runs/table1_llama_available_summary.json",
+    "figure4_heatmap": "/home/liying/projects/turboquant/reproduce/runs/figure4_needle_available_heatmap.json",
+    "figure5_summary": "/home/liying/projects/turboquant/reproduce/runs/figure5_turboquant_dbpedia_fullscale.json",
+    "table2_summary": "/home/liying/projects/turboquant/reproduce/runs/table2_quantization_time_summary.json",
+    "kv_policy": "/home/liying/projects/turboquant/reproduce/runs/kv_compression_policy_summary.json",
+    "figure3_summary": "/home/liying/projects/turboquant/reproduce/runs/figure3_core_d256_summary.json"
+  },
+  "completion": {
+    "table1_complete": false,
+    "figure4_complete": false,
+    "figure5_dbpedia_complete": true,
+    "figure5_glove_complete": false,
+    "core_validation_complete": true
+  },
+  "asset_audit": {
+    "longbench": {
+      "metadata_or_lock_only": 30,
+      "materialized": 2
+    },
+    "needle": {
+      "missing": 5,
+      "materialized": 1
+    },
+    "dbpedia": {
+      "materialized": 2
+    }
+  },
+  "table1": {
+    "paper_rows": [
+      {
+        "method": "Full Cache",
+        "kv_size": 16.0,
+        "SingleQA": 45.29,
+        "MultiQA": 45.16,
+        "Summarization": 26.55,
+        "Few shot": 68.38,
+        "Synthetic": 59.54,
+        "Code": 46.28,
+        "Average": 50.06
+      },
+      {
+        "method": "TurboQuant",
+        "kv_size": 2.5,
+        "SingleQA": 44.16,
+        "MultiQA": 44.96,
+        "Summarization": 24.8,
+        "Few shot": 68.01,
+        "Synthetic": 59.65,
+        "Code": 45.76,
+        "Average": 49.44
+      },
+      {
+        "method": "TurboQuant",
+        "kv_size": 3.5,
+        "SingleQA": 45.01,
+        "MultiQA": 45.31,
+        "Summarization": 26.0,
+        "Few shot": 68.63,
+        "Synthetic": 59.95,
+        "Code": 46.17,
+        "Average": 50.06
+      }
+    ],
+    "local_rows": [
+      {
+        "model": "Llama-3.1-8B-Instruct",
+        "method": "Full Cache",
+        "kv_size": 16.0,
+        "source": "/datasets/liying/projects/turboquant/reproduce/runs/table1_inputs/full_available.jsonl",
+        "categories": {
+          "SingleQA": null,
+          "MultiQA": 11.32926940787766,
+          "Summarization": null,
+          "Few shot": null,
+          "Synthetic": null,
+          "Code": null
+        },
+        "average_available_categories": 11.32926940787766,
+        "dataset_scores": {
+          "2wikimqa": 11.32926940787766
+        },
+        "coverage": {
+          "SingleQA": {
+            "available": [],
+            "missing": [
+              "narrativeqa",
+              "qasper",
+              "multifieldqa_en"
+            ]
+          },
+          "MultiQA": {
+            "available": [
+              "2wikimqa"
+            ],
+            "missing": [
+              "hotpotqa",
+              "musique"
+            ]
+          },
+          "Summarization": {
+            "available": [],
+            "missing": [
+              "gov_report",
+              "qmsum",
+              "multi_news"
+            ]
+          },
+          "Few shot": {
+            "available": [],
+            "missing": [
+              "trec",
+              "triviaqa",
+              "samsum"
+            ]
+          },
+          "Synthetic": {
+            "available": [],
+            "missing": [
+              "passage_retrieval_en",
+              "passage_count"
+            ]
+          },
+          "Code": {
+            "available": [],
+            "missing": [
+              "lcc",
+              "repobench-p"
+            ]
+          }
+        },
+        "avg_cache_storage_ratio": null
+      },
+      {
+        "model": "Llama-3.1-8B-Instruct",
+        "method": "TurboQuant",
+        "kv_size": 2.5,
+        "source": "/datasets/liying/projects/turboquant/reproduce/runs/table1_inputs/turboquant_2_5bit_available.jsonl",
+        "categories": {
+          "SingleQA": null,
+          "MultiQA": 11.864459905372291,
+          "Summarization": null,
+          "Few shot": null,
+          "Synthetic": null,
+          "Code": null
+        },
+        "average_available_categories": 11.864459905372291,
+        "dataset_scores": {
+          "2wikimqa": 11.864459905372291
+        },
+        "coverage": {
+          "SingleQA": {
+            "available": [],
+            "missing": [
+              "narrativeqa",
+              "qasper",
+              "multifieldqa_en"
+            ]
+          },
+          "MultiQA": {
+            "available": [
+              "2wikimqa"
+            ],
+            "missing": [
+              "hotpotqa",
+              "musique"
+            ]
+          },
+          "Summarization": {
+            "available": [],
+            "missing": [
+              "gov_report",
+              "qmsum",
+              "multi_news"
+            ]
+          },
+          "Few shot": {
+            "available": [],
+            "missing": [
+              "trec",
+              "triviaqa",
+              "samsum"
+            ]
+          },
+          "Synthetic": {
+            "available": [],
+            "missing": [
+              "passage_retrieval_en",
+              "passage_count"
+            ]
+          },
+          "Code": {
+            "available": [],
+            "missing": [
+              "lcc",
+              "repobench-p"
+            ]
+          }
+        },
+        "avg_cache_storage_ratio": 0.1727959981785457
+      },
+      {
+        "model": "Llama-3.1-8B-Instruct",
+        "method": "TurboQuant",
+        "kv_size": 3.5,
+        "source": "/datasets/liying/projects/turboquant/reproduce/runs/table1_inputs/turboquant_3_5bit_available.jsonl",
+        "categories": {
+          "SingleQA": null,
+          "MultiQA": 12.560744182111991,
+          "Summarization": null,
+          "Few shot": null,
+          "Synthetic": null,
+          "Code": null
+        },
+        "average_available_categories": 12.560744182111991,
+        "dataset_scores": {
+          "2wikimqa": 12.560744182111991
+        },
+        "coverage": {
+          "SingleQA": {
+            "available": [],
+            "missing": [
+              "narrativeqa",
+              "qasper",
+              "multifieldqa_en"
+            ]
+          },
+          "MultiQA": {
+            "available": [
+              "2wikimqa"
+            ],
+            "missing": [
+              "hotpotqa",
+              "musique"
+            ]
+          },
+          "Summarization": {
+            "available": [],
+            "missing": [
+              "gov_report",
+              "qmsum",
+              "multi_news"
+            ]
+          },
+          "Few shot": {
+            "available": [],
+            "missing": [
+              "trec",
+              "triviaqa",
+              "samsum"
+            ]
+          },
+          "Synthetic": {
+            "available": [],
+            "missing": [
+              "passage_retrieval_en",
+              "passage_count"
+            ]
+          },
+          "Code": {
+            "available": [],
+            "missing": [
+              "lcc",
+              "repobench-p"
+            ]
+          }
+        },
+        "avg_cache_storage_ratio": 0.23536109400900582
+      }
+    ],
+    "comparison_rows": [
+      {
+        "paper": {
+          "method": "Full Cache",
+          "kv_size": 16.0,
+          "SingleQA": 45.29,
+          "MultiQA": 45.16,
+          "Summarization": 26.55,
+          "Few shot": 68.38,
+          "Synthetic": 59.54,
+          "Code": 46.28,
+          "Average": 50.06
+        },
+        "local": {
+          "model": "Llama-3.1-8B-Instruct",
+          "method": "Full Cache",
+          "kv_size": 16.0,
+          "source": "/datasets/liying/projects/turboquant/reproduce/runs/table1_inputs/full_available.jsonl",
+          "categories": {
+            "SingleQA": null,
+            "MultiQA": 11.32926940787766,
+            "Summarization": null,
+            "Few shot": null,
+            "Synthetic": null,
+            "Code": null
+          },
+          "average_available_categories": 11.32926940787766,
+          "dataset_scores": {
+            "2wikimqa": 11.32926940787766
+          },
+          "coverage": {
+            "SingleQA": {
+              "available": [],
+              "missing": [
+                "narrativeqa",
+                "qasper",
+                "multifieldqa_en"
+              ]
+            },
+            "MultiQA": {
+              "available": [
+                "2wikimqa"
+              ],
+              "missing": [
+                "hotpotqa",
+                "musique"
+              ]
+            },
+            "Summarization": {
+              "available": [],
+              "missing": [
+                "gov_report",
+                "qmsum",
+                "multi_news"
+              ]
+            },
+            "Few shot": {
+              "available": [],
+              "missing": [
+                "trec",
+                "triviaqa",
+                "samsum"
+              ]
+            },
+            "Synthetic": {
+              "available": [],
+              "missing": [
+                "passage_retrieval_en",
+                "passage_count"
+              ]
+            },
+            "Code": {
+              "available": [],
+              "missing": [
+                "lcc",
+                "repobench-p"
+              ]
+            }
+          },
+          "avg_cache_storage_ratio": null
+        }
+      },
+      {
+        "paper": {
+          "method": "TurboQuant",
+          "kv_size": 2.5,
+          "SingleQA": 44.16,
+          "MultiQA": 44.96,
+          "Summarization": 24.8,
+          "Few shot": 68.01,
+          "Synthetic": 59.65,
+          "Code": 45.76,
+          "Average": 49.44
+        },
+        "local": {
+          "model": "Llama-3.1-8B-Instruct",
+          "method": "TurboQuant",
+          "kv_size": 2.5,
+          "source": "/datasets/liying/projects/turboquant/reproduce/runs/table1_inputs/turboquant_2_5bit_available.jsonl",
+          "categories": {
+            "SingleQA": null,
+            "MultiQA": 11.864459905372291,
+            "Summarization": null,
+            "Few shot": null,
+            "Synthetic": null,
+            "Code": null
+          },
+          "average_available_categories": 11.864459905372291,
+          "dataset_scores": {
+            "2wikimqa": 11.864459905372291
+          },
+          "coverage": {
+            "SingleQA": {
+              "available": [],
+              "missing": [
+                "narrativeqa",
+                "qasper",
+                "multifieldqa_en"
+              ]
+            },
+            "MultiQA": {
+              "available": [
+                "2wikimqa"
+              ],
+              "missing": [
+                "hotpotqa",
+                "musique"
+              ]
+            },
+            "Summarization": {
+              "available": [],
+              "missing": [
+                "gov_report",
+                "qmsum",
+                "multi_news"
+              ]
+            },
+            "Few shot": {
+              "available": [],
+              "missing": [
+                "trec",
+                "triviaqa",
+                "samsum"
+              ]
+            },
+            "Synthetic": {
+              "available": [],
+              "missing": [
+                "passage_retrieval_en",
+                "passage_count"
+              ]
+            },
+            "Code": {
+              "available": [],
+              "missing": [
+                "lcc",
+                "repobench-p"
+              ]
+            }
+          },
+          "avg_cache_storage_ratio": 0.1727959981785457
+        }
+      },
+      {
+        "paper": {
+          "method": "TurboQuant",
+          "kv_size": 3.5,
+          "SingleQA": 45.01,
+          "MultiQA": 45.31,
+          "Summarization": 26.0,
+          "Few shot": 68.63,
+          "Synthetic": 59.95,
+          "Code": 46.17,
+          "Average": 50.06
+        },
+        "local": {
+          "model": "Llama-3.1-8B-Instruct",
+          "method": "TurboQuant",
+          "kv_size": 3.5,
+          "source": "/datasets/liying/projects/turboquant/reproduce/runs/table1_inputs/turboquant_3_5bit_available.jsonl",
+          "categories": {
+            "SingleQA": null,
+            "MultiQA": 12.560744182111991,
+            "Summarization": null,
+            "Few shot": null,
+            "Synthetic": null,
+            "Code": null
+          },
+          "average_available_categories": 12.560744182111991,
+          "dataset_scores": {
+            "2wikimqa": 12.560744182111991
+          },
+          "coverage": {
+            "SingleQA": {
+              "available": [],
+              "missing": [
+                "narrativeqa",
+                "qasper",
+                "multifieldqa_en"
+              ]
+            },
+            "MultiQA": {
+              "available": [
+                "2wikimqa"
+              ],
+              "missing": [
+                "hotpotqa",
+                "musique"
+              ]
+            },
+            "Summarization": {
+              "available": [],
+              "missing": [
+                "gov_report",
+                "qmsum",
+                "multi_news"
+              ]
+            },
+            "Few shot": {
+              "available": [],
+              "missing": [
+                "trec",
+                "triviaqa",
+                "samsum"
+              ]
+            },
+            "Synthetic": {
+              "available": [],
+              "missing": [
+                "passage_retrieval_en",
+                "passage_count"
+              ]
+            },
+            "Code": {
+              "available": [],
+              "missing": [
+                "lcc",
+                "repobench-p"
+              ]
+            }
+          },
+          "avg_cache_storage_ratio": 0.23536109400900582
+        }
+      }
+    ],
+    "manifest": {
+      "complete": 6,
+      "missing_dataset": 90
+    },
+    "plan": {
+      "manifest_status_counts": {
+        "complete": 6,
+        "missing_dataset": 90
+      },
+      "num_planned_entries": 0,
+      "num_planned_jobs": 0,
+      "planned_status_counts": {},
+      "skipped_status_counts": {
+        "missing_dataset": 90,
+        "complete": 6
+      }
+    }
+  },
+  "figure4": {
+    "paper_scores": {
+      "Full-Precision": 0.997,
+      "TurboQuant": 0.997
+    },
+    "local_runs": [
+      {
+        "method": "Full-Precision",
+        "kv_size": 16.0,
+        "paper_score": 0.997,
+        "source": "/datasets/liying/projects/turboquant/reproduce/runs/figure4_inputs/full_precision_available.jsonl",
+        "overall": {
+          "num_examples": 24,
+          "score": 1.0,
+          "avg_prompt_tokens": 8927.125,
+          "avg_latency_seconds": 2.1109489813873856,
+          "avg_cache_storage_ratio": null
+        },
+        "token_limits": [
+          8192,
+          16384
+        ],
+        "depth_percents": [
+          0,
+          50,
+          100
+        ],
+        "score_matrix": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "cells": [
+          {
+            "token_limit": 8192,
+            "depth_percent": 0,
+            "num_examples": 3,
+            "score": 1.0,
+            "avg_prompt_tokens": 7472.666666666667,
+            "avg_latency_seconds": 1.8636337023538847,
+            "avg_cache_storage_ratio": null
+          },
+          {
+            "token_limit": 8192,
+            "depth_percent": 50,
+            "num_examples": 3,
+            "score": 1.0,
+            "avg_prompt_tokens": 7472.666666666667,
+            "avg_latency_seconds": 1.862791447667405,
+            "avg_cache_storage_ratio": null
+          },
+          {
+            "token_limit": 8192,
+            "depth_percent": 100,
+            "num_examples": 3,
+            "score": 1.0,
+            "avg_prompt_tokens": 7472.666666666667,
+            "avg_latency_seconds": 1.9829517626979698,
+            "avg_cache_storage_ratio": null
+          },
+          {
+            "token_limit": 16384,
+            "depth_percent": 0,
+            "num_examples": 5,
+            "score": 1.0,
+            "avg_prompt_tokens": 9799.8,
+            "avg_latency_seconds": 2.11636045682244,
+            "avg_cache_storage_ratio": null
+          },
+          {
+            "token_limit": 16384,
+            "depth_percent": 50,
+            "num_examples": 5,
+            "score": 1.0,
+            "avg_prompt_tokens": 9799.8,
+            "avg_latency_seconds": 2.297366785770282,
+            "avg_cache_storage_ratio": null
+          },
+          {
+            "token_limit": 16384,
+            "depth_percent": 100,
+            "num_examples": 5,
+            "score": 1.0,
+            "avg_prompt_tokens": 9799.8,
+            "avg_latency_seconds": 2.2932017204351722,
+            "avg_cache_storage_ratio": null
+          }
+        ]
+      },
+      {
+        "method": "TurboQuant",
+        "kv_size": 2.5,
+        "paper_score": 0.997,
+        "source": "/datasets/liying/projects/turboquant/reproduce/runs/figure4_inputs/turboquant_2_5bit_available.jsonl",
+        "overall": {
+          "num_examples": 24,
+          "score": 1.0,
+          "avg_prompt_tokens": 8927.125,
+          "avg_latency_seconds": 20.27801844930703,
+          "avg_cache_storage_ratio": 0.17230202243004533
+        },
+        "token_limits": [
+          8192,
+          16384
+        ],
+        "depth_percents": [
+          0,
+          50,
+          100
+        ],
+        "score_matrix": [
+          [
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "cells": [
+          {
+            "token_limit": 8192,
+            "depth_percent": 0,
+            "num_examples": 3,
+            "score": 1.0,
+            "avg_prompt_tokens": 7472.666666666667,
+            "avg_latency_seconds": 21.426596970995888,
+            "avg_cache_storage_ratio": 0.1724081783294261
+          },
+          {
+            "token_limit": 8192,
+            "depth_percent": 50,
+            "num_examples": 3,
+            "score": 1.0,
+            "avg_prompt_tokens": 7472.666666666667,
+            "avg_latency_seconds": 18.576139805683244,
+            "avg_cache_storage_ratio": 0.17235848377370802
+          },
+          {
+            "token_limit": 8192,
+            "depth_percent": 100,
+            "num_examples": 3,
+            "score": 1.0,
+            "avg_prompt_tokens": 7472.666666666667,
+            "avg_latency_seconds": 21.591967144592974,
+            "avg_cache_storage_ratio": 0.1724081783294261
+          },
+          {
+            "token_limit": 16384,
+            "depth_percent": 0,
+            "num_examples": 5,
+            "score": 1.0,
+            "avg_prompt_tokens": 9799.8,
+            "avg_latency_seconds": 22.654703174810855,
+            "avg_cache_storage_ratio": 0.17228613619136302
+          },
+          {
+            "token_limit": 16384,
+            "depth_percent": 50,
+            "num_examples": 5,
+            "score": 1.0,
+            "avg_prompt_tokens": 9799.8,
+            "avg_latency_seconds": 18.831846770178526,
+            "avg_cache_storage_ratio": 0.1722293336066593
+          },
+          {
+            "token_limit": 16384,
+            "depth_percent": 100,
+            "num_examples": 5,
+            "score": 1.0,
+            "avg_prompt_tokens": 9799.8,
+            "avg_latency_seconds": 18.8911162589211,
+            "avg_cache_storage_ratio": 0.1722293336066593
+          }
+        ]
+      }
+    ],
+    "plan": {
+      "num_planned_entries": 0,
+      "planned_status_counts": {},
+      "skipped_status_counts": {
+        "missing_dataset": 10,
+        "complete": 2
+      },
+      "all_status_counts": {
+        "missing_dataset": 10,
+        "complete": 2
+      }
+    }
+  },
+  "figure5": {
+    "dbpedia_rows": [
+      {
+        "dataset_key": "dbpedia_openai3_1536",
+        "dimension": 1536,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 2,
+        "topk": 1,
+        "recall_1_at_k": 0.8999999761581421,
+        "quantize_seconds_mean": 0.06858585891313851,
+        "quantize_seconds_min": 0.06858585891313851,
+        "quantize_seconds_max": 0.06858585891313851,
+        "dequantize_seconds": 0.10018246993422508,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_1536_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_1536",
+        "dimension": 1536,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 2,
+        "topk": 2,
+        "recall_1_at_k": 0.9729999899864197,
+        "quantize_seconds_mean": 0.06858585891313851,
+        "quantize_seconds_min": 0.06858585891313851,
+        "quantize_seconds_max": 0.06858585891313851,
+        "dequantize_seconds": 0.10018246993422508,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_1536_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_1536",
+        "dimension": 1536,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 2,
+        "topk": 4,
+        "recall_1_at_k": 0.9980000257492065,
+        "quantize_seconds_mean": 0.06858585891313851,
+        "quantize_seconds_min": 0.06858585891313851,
+        "quantize_seconds_max": 0.06858585891313851,
+        "dequantize_seconds": 0.10018246993422508,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_1536_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_1536",
+        "dimension": 1536,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 2,
+        "topk": 8,
+        "recall_1_at_k": 1.0,
+        "quantize_seconds_mean": 0.06858585891313851,
+        "quantize_seconds_min": 0.06858585891313851,
+        "quantize_seconds_max": 0.06858585891313851,
+        "dequantize_seconds": 0.10018246993422508,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_1536_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_1536",
+        "dimension": 1536,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 2,
+        "topk": 16,
+        "recall_1_at_k": 1.0,
+        "quantize_seconds_mean": 0.06858585891313851,
+        "quantize_seconds_min": 0.06858585891313851,
+        "quantize_seconds_max": 0.06858585891313851,
+        "dequantize_seconds": 0.10018246993422508,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_1536_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_1536",
+        "dimension": 1536,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 2,
+        "topk": 32,
+        "recall_1_at_k": 1.0,
+        "quantize_seconds_mean": 0.06858585891313851,
+        "quantize_seconds_min": 0.06858585891313851,
+        "quantize_seconds_max": 0.06858585891313851,
+        "dequantize_seconds": 0.10018246993422508,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_1536_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_1536",
+        "dimension": 1536,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 2,
+        "topk": 64,
+        "recall_1_at_k": 1.0,
+        "quantize_seconds_mean": 0.06858585891313851,
+        "quantize_seconds_min": 0.06858585891313851,
+        "quantize_seconds_max": 0.06858585891313851,
+        "dequantize_seconds": 0.10018246993422508,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_1536_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_1536",
+        "dimension": 1536,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 4,
+        "topk": 1,
+        "recall_1_at_k": 0.9660000205039978,
+        "quantize_seconds_mean": 0.1312120840884745,
+        "quantize_seconds_min": 0.1312120840884745,
+        "quantize_seconds_max": 0.1312120840884745,
+        "dequantize_seconds": 0.09472217201255262,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_1536_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_1536",
+        "dimension": 1536,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 4,
+        "topk": 2,
+        "recall_1_at_k": 0.9959999918937683,
+        "quantize_seconds_mean": 0.1312120840884745,
+        "quantize_seconds_min": 0.1312120840884745,
+        "quantize_seconds_max": 0.1312120840884745,
+        "dequantize_seconds": 0.09472217201255262,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_1536_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_1536",
+        "dimension": 1536,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 4,
+        "topk": 4,
+        "recall_1_at_k": 1.0,
+        "quantize_seconds_mean": 0.1312120840884745,
+        "quantize_seconds_min": 0.1312120840884745,
+        "quantize_seconds_max": 0.1312120840884745,
+        "dequantize_seconds": 0.09472217201255262,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_1536_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_1536",
+        "dimension": 1536,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 4,
+        "topk": 8,
+        "recall_1_at_k": 1.0,
+        "quantize_seconds_mean": 0.1312120840884745,
+        "quantize_seconds_min": 0.1312120840884745,
+        "quantize_seconds_max": 0.1312120840884745,
+        "dequantize_seconds": 0.09472217201255262,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_1536_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_1536",
+        "dimension": 1536,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 4,
+        "topk": 16,
+        "recall_1_at_k": 1.0,
+        "quantize_seconds_mean": 0.1312120840884745,
+        "quantize_seconds_min": 0.1312120840884745,
+        "quantize_seconds_max": 0.1312120840884745,
+        "dequantize_seconds": 0.09472217201255262,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_1536_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_1536",
+        "dimension": 1536,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 4,
+        "topk": 32,
+        "recall_1_at_k": 1.0,
+        "quantize_seconds_mean": 0.1312120840884745,
+        "quantize_seconds_min": 0.1312120840884745,
+        "quantize_seconds_max": 0.1312120840884745,
+        "dequantize_seconds": 0.09472217201255262,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_1536_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_1536",
+        "dimension": 1536,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 4,
+        "topk": 64,
+        "recall_1_at_k": 1.0,
+        "quantize_seconds_mean": 0.1312120840884745,
+        "quantize_seconds_min": 0.1312120840884745,
+        "quantize_seconds_max": 0.1312120840884745,
+        "dequantize_seconds": 0.09472217201255262,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_1536_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_3072",
+        "dimension": 3072,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 2,
+        "topk": 1,
+        "recall_1_at_k": 0.9039999842643738,
+        "quantize_seconds_mean": 0.15465974994003773,
+        "quantize_seconds_min": 0.15465974994003773,
+        "quantize_seconds_max": 0.15465974994003773,
+        "dequantize_seconds": 0.18470800784416497,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_3072_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_3072",
+        "dimension": 3072,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 2,
+        "topk": 2,
+        "recall_1_at_k": 0.984000027179718,
+        "quantize_seconds_mean": 0.15465974994003773,
+        "quantize_seconds_min": 0.15465974994003773,
+        "quantize_seconds_max": 0.15465974994003773,
+        "dequantize_seconds": 0.18470800784416497,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_3072_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_3072",
+        "dimension": 3072,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 2,
+        "topk": 4,
+        "recall_1_at_k": 0.9980000257492065,
+        "quantize_seconds_mean": 0.15465974994003773,
+        "quantize_seconds_min": 0.15465974994003773,
+        "quantize_seconds_max": 0.15465974994003773,
+        "dequantize_seconds": 0.18470800784416497,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_3072_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_3072",
+        "dimension": 3072,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 2,
+        "topk": 8,
+        "recall_1_at_k": 1.0,
+        "quantize_seconds_mean": 0.15465974994003773,
+        "quantize_seconds_min": 0.15465974994003773,
+        "quantize_seconds_max": 0.15465974994003773,
+        "dequantize_seconds": 0.18470800784416497,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_3072_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_3072",
+        "dimension": 3072,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 2,
+        "topk": 16,
+        "recall_1_at_k": 1.0,
+        "quantize_seconds_mean": 0.15465974994003773,
+        "quantize_seconds_min": 0.15465974994003773,
+        "quantize_seconds_max": 0.15465974994003773,
+        "dequantize_seconds": 0.18470800784416497,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_3072_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_3072",
+        "dimension": 3072,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 2,
+        "topk": 32,
+        "recall_1_at_k": 1.0,
+        "quantize_seconds_mean": 0.15465974994003773,
+        "quantize_seconds_min": 0.15465974994003773,
+        "quantize_seconds_max": 0.15465974994003773,
+        "dequantize_seconds": 0.18470800784416497,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_3072_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_3072",
+        "dimension": 3072,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 2,
+        "topk": 64,
+        "recall_1_at_k": 1.0,
+        "quantize_seconds_mean": 0.15465974994003773,
+        "quantize_seconds_min": 0.15465974994003773,
+        "quantize_seconds_max": 0.15465974994003773,
+        "dequantize_seconds": 0.18470800784416497,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_3072_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_3072",
+        "dimension": 3072,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 4,
+        "topk": 1,
+        "recall_1_at_k": 0.9729999899864197,
+        "quantize_seconds_mean": 0.20002280198968947,
+        "quantize_seconds_min": 0.20002280198968947,
+        "quantize_seconds_max": 0.20002280198968947,
+        "dequantize_seconds": 0.18130938988178968,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_3072_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_3072",
+        "dimension": 3072,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 4,
+        "topk": 2,
+        "recall_1_at_k": 0.9990000128746033,
+        "quantize_seconds_mean": 0.20002280198968947,
+        "quantize_seconds_min": 0.20002280198968947,
+        "quantize_seconds_max": 0.20002280198968947,
+        "dequantize_seconds": 0.18130938988178968,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_3072_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_3072",
+        "dimension": 3072,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 4,
+        "topk": 4,
+        "recall_1_at_k": 1.0,
+        "quantize_seconds_mean": 0.20002280198968947,
+        "quantize_seconds_min": 0.20002280198968947,
+        "quantize_seconds_max": 0.20002280198968947,
+        "dequantize_seconds": 0.18130938988178968,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_3072_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_3072",
+        "dimension": 3072,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 4,
+        "topk": 8,
+        "recall_1_at_k": 1.0,
+        "quantize_seconds_mean": 0.20002280198968947,
+        "quantize_seconds_min": 0.20002280198968947,
+        "quantize_seconds_max": 0.20002280198968947,
+        "dequantize_seconds": 0.18130938988178968,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_3072_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_3072",
+        "dimension": 3072,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 4,
+        "topk": 16,
+        "recall_1_at_k": 1.0,
+        "quantize_seconds_mean": 0.20002280198968947,
+        "quantize_seconds_min": 0.20002280198968947,
+        "quantize_seconds_max": 0.20002280198968947,
+        "dequantize_seconds": 0.18130938988178968,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_3072_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_3072",
+        "dimension": 3072,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 4,
+        "topk": 32,
+        "recall_1_at_k": 1.0,
+        "quantize_seconds_mean": 0.20002280198968947,
+        "quantize_seconds_min": 0.20002280198968947,
+        "quantize_seconds_max": 0.20002280198968947,
+        "dequantize_seconds": 0.18130938988178968,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_3072_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_3072",
+        "dimension": 3072,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 4,
+        "topk": 64,
+        "recall_1_at_k": 1.0,
+        "quantize_seconds_mean": 0.20002280198968947,
+        "quantize_seconds_min": 0.20002280198968947,
+        "quantize_seconds_max": 0.20002280198968947,
+        "dequantize_seconds": 0.18130938988178968,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_3072_fullscale_100k_1k.json"
+      }
+    ],
+    "dbpedia_top1_rows": [
+      {
+        "dataset_key": "dbpedia_openai3_1536",
+        "dimension": 1536,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 2,
+        "topk": 1,
+        "recall_1_at_k": 0.8999999761581421,
+        "quantize_seconds_mean": 0.06858585891313851,
+        "quantize_seconds_min": 0.06858585891313851,
+        "quantize_seconds_max": 0.06858585891313851,
+        "dequantize_seconds": 0.10018246993422508,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_1536_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_1536",
+        "dimension": 1536,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 4,
+        "topk": 1,
+        "recall_1_at_k": 0.9660000205039978,
+        "quantize_seconds_mean": 0.1312120840884745,
+        "quantize_seconds_min": 0.1312120840884745,
+        "quantize_seconds_max": 0.1312120840884745,
+        "dequantize_seconds": 0.09472217201255262,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_1536_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_3072",
+        "dimension": 3072,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 2,
+        "topk": 1,
+        "recall_1_at_k": 0.9039999842643738,
+        "quantize_seconds_mean": 0.15465974994003773,
+        "quantize_seconds_min": 0.15465974994003773,
+        "quantize_seconds_max": 0.15465974994003773,
+        "dequantize_seconds": 0.18470800784416497,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_3072_fullscale_100k_1k.json"
+      },
+      {
+        "dataset_key": "dbpedia_openai3_3072",
+        "dimension": 3072,
+        "num_database": 100000,
+        "num_queries": 1000,
+        "bits": 4,
+        "topk": 1,
+        "recall_1_at_k": 0.9729999899864197,
+        "quantize_seconds_mean": 0.20002280198968947,
+        "quantize_seconds_min": 0.20002280198968947,
+        "quantize_seconds_max": 0.20002280198968947,
+        "dequantize_seconds": 0.18130938988178968,
+        "num_repeats": 1,
+        "source": "reproduce/runs/ann_dbpedia_3072_fullscale_100k_1k.json"
+      }
+    ],
+    "glove_available": false
+  },
+  "table2": {
+    "rows": [
+      {
+        "dimension": 200,
+        "source": "random_unit",
+        "num_vectors": 2048,
+        "local_mean_seconds": 0.0001468557165935,
+        "paper_turboquant_seconds": 0.0007,
+        "local_minus_paper_seconds": -0.0005531442834065,
+        "local_over_paper": 0.20979388084785713
+      },
+      {
+        "dimension": 1536,
+        "source": "dbpedia_cache",
+        "num_vectors": 2048,
+        "local_mean_seconds": 0.0014245237573049,
+        "paper_turboquant_seconds": 0.0013,
+        "local_minus_paper_seconds": 0.00012452375730490008,
+        "local_over_paper": 1.095787505619154
+      },
+      {
+        "dimension": 3072,
+        "source": "dbpedia_cache",
+        "num_vectors": 2048,
+        "local_mean_seconds": 0.0032564748893491,
+        "paper_turboquant_seconds": 0.0021,
+        "local_minus_paper_seconds": 0.0011564748893491002,
+        "local_over_paper": 1.5507023282614762
+      }
+    ]
+  },
+  "kv_policy": {
+    "runs": [
+      {
+        "label": "longbench_e_2wikimqa_tq_2_5",
+        "source": "reproduce/runs/longbench_e_2wikimqa_turboquant_2_5bit_chunked.jsonl",
+        "num_records": 300,
+        "num_records_with_cache_summary": 300,
+        "avg_effective_index_bits": 2.5,
+        "min_effective_index_bits": 2.5,
+        "max_effective_index_bits": 2.5,
+        "avg_cache_storage_ratio": 0.17271854226170927,
+        "outlier_policy_counts": {
+          "dynamic_absmean": 300
+        },
+        "outlier_count_values": {
+          "64": 300
+        },
+        "regular_bit_values": {
+          "2": 300
+        },
+        "outlier_bit_values": {
+          "3": 300
+        },
+        "avg_num_segments": null,
+        "avg_num_packed_segments": null,
+        "avg_num_raw_segments": null
+      },
+      {
+        "label": "longbench_e_2wikimqa_tq_3_5",
+        "source": "reproduce/runs/longbench_e_2wikimqa_turboquant_3_5bit_chunked.jsonl",
+        "num_records": 300,
+        "num_records_with_cache_summary": 300,
+        "avg_effective_index_bits": 3.5,
+        "min_effective_index_bits": 3.5,
+        "max_effective_index_bits": 3.5,
+        "avg_cache_storage_ratio": 0.23526130336532924,
+        "outlier_policy_counts": {
+          "dynamic_absmean": 300
+        },
+        "outlier_count_values": {
+          "64": 300
+        },
+        "regular_bit_values": {
+          "3": 300
+        },
+        "outlier_bit_values": {
+          "4": 300
+        },
+        "avg_num_segments": null,
+        "avg_num_packed_segments": null,
+        "avg_num_raw_segments": null
+      },
+      {
+        "label": "longbench_2wikimqa_tq_2_5",
+        "source": "reproduce/runs/longbench_2wikimqa_turboquant_2_5bit_chunked.jsonl",
+        "num_records": 200,
+        "num_records_with_cache_summary": 200,
+        "avg_effective_index_bits": 2.5,
+        "min_effective_index_bits": 2.5,
+        "max_effective_index_bits": 2.5,
+        "avg_cache_storage_ratio": 0.17291218205380024,
+        "outlier_policy_counts": {
+          "dynamic_absmean": 200
+        },
+        "outlier_count_values": {
+          "64": 200
+        },
+        "regular_bit_values": {
+          "2": 200
+        },
+        "outlier_bit_values": {
+          "3": 200
+        },
+        "avg_num_segments": null,
+        "avg_num_packed_segments": null,
+        "avg_num_raw_segments": null
+      },
+      {
+        "label": "longbench_2wikimqa_tq_3_5",
+        "source": "reproduce/runs/longbench_2wikimqa_turboquant_3_5bit_chunked.jsonl",
+        "num_records": 200,
+        "num_records_with_cache_summary": 200,
+        "avg_effective_index_bits": 3.5,
+        "min_effective_index_bits": 3.5,
+        "max_effective_index_bits": 3.5,
+        "avg_cache_storage_ratio": 0.23551077997452022,
+        "outlier_policy_counts": {
+          "dynamic_absmean": 200
+        },
+        "outlier_count_values": {
+          "64": 200
+        },
+        "regular_bit_values": {
+          "3": 200
+        },
+        "outlier_bit_values": {
+          "4": 200
+        },
+        "avg_num_segments": null,
+        "avg_num_packed_segments": null,
+        "avg_num_raw_segments": null
+      },
+      {
+        "label": "needle_16k_tq_2_5",
+        "source": "reproduce/runs/needle_16k_turboquant_2_5bit_grid_24.jsonl",
+        "num_records": 24,
+        "num_records_with_cache_summary": 24,
+        "avg_effective_index_bits": 2.5,
+        "min_effective_index_bits": 2.5,
+        "max_effective_index_bits": 2.5,
+        "avg_cache_storage_ratio": 0.17230202243004533,
+        "outlier_policy_counts": {
+          "dynamic_absmean": 24
+        },
+        "outlier_count_values": {
+          "64": 24
+        },
+        "regular_bit_values": {
+          "2": 24
+        },
+        "outlier_bit_values": {
+          "3": 24
+        },
+        "avg_num_segments": null,
+        "avg_num_packed_segments": null,
+        "avg_num_raw_segments": null
+      },
+      {
+        "label": "needle_generated_4k_tq_2_5",
+        "source": "reproduce/runs/needle_generated_4k_turboquant_2_5bit.jsonl",
+        "num_records": 24,
+        "num_records_with_cache_summary": 24,
+        "avg_effective_index_bits": 2.5,
+        "min_effective_index_bits": 2.5,
+        "max_effective_index_bits": 2.5,
+        "avg_cache_storage_ratio": 0.17284425649023252,
+        "outlier_policy_counts": {
+          "dynamic_absmean": 24
+        },
+        "outlier_count_values": {
+          "64": 24
+        },
+        "regular_bit_values": {
+          "2": 24
+        },
+        "outlier_bit_values": {
+          "3": 24
+        },
+        "avg_num_segments": null,
+        "avg_num_packed_segments": null,
+        "avg_num_raw_segments": null
+      }
+    ]
+  },
+  "figure3": {
+    "1": {
+      "mse_mean": 0.36113642652829486,
+      "mse_ip_error_mean": 0.0009258859208784997,
+      "prod_ip_error_mean": 0.0024038780635843673,
+      "prod_ip_error_var": 0.0060897159079710645
+    },
+    "2": {
+      "mse_mean": 0.11668147146701813,
+      "mse_ip_error_mean": 0.00018351366937470934,
+      "prod_ip_error_mean": 0.00032150008094807464,
+      "prod_ip_error_var": 0.002223421431457003
+    },
+    "3": {
+      "mse_mean": 0.03412689392765363,
+      "mse_ip_error_mean": -0.00025374088242339593,
+      "prod_ip_error_mean": -0.0013933653244748712,
+      "prod_ip_error_var": 0.000687059403086702
+    },
+    "4": {
+      "mse_mean": 0.009375435921053091,
+      "mse_ip_error_mean": 2.3324292366548132e-05,
+      "prod_ip_error_mean": -0.000268021147348918,
+      "prod_ip_error_var": 0.00019349333403321603
+    }
+  }
+}

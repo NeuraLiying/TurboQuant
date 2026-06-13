@@ -1,0 +1,49 @@
+model_key: llama_3_1_8b_instruct
+model_name: meta-llama/Llama-3.1-8B-Instruct
+
+hardware:
+  target_gpu: NVIDIA GeForce RTX 4090
+  dtype: bfloat16
+
+longbench:
+  primary_dataset_key: longbench_e_2wikimqa
+  fallback_dataset_key: longbench_2wikimqa
+  max_examples_smoke: 2
+  max_examples_debug: 20
+  max_examples_full: null
+  seed: 42
+  generation:
+    do_sample: false
+    temperature: null
+    top_p: null
+
+turboquant:
+  target_setups:
+    - name: full_cache
+      kv_bits: 16
+      quantized: false
+    - name: turboquant_2_5bit
+      kv_bits: 2.5
+      quantized: true
+    - name: turboquant_3_5bit
+      kv_bits: 3.5
+      quantized: true
+
+needle:
+  dataset_key: needle_16k_en
+  target_methods:
+    - full_precision
+    - turboquant
+
+ann_search:
+  dataset_keys:
+    - dbpedia_openai3_1536
+    - dbpedia_openai3_3072
+  topk:
+    - 1
+    - 2
+    - 4
+    - 8
+    - 16
+    - 32
+    - 64

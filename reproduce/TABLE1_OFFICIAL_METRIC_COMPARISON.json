@@ -1,0 +1,608 @@
+[
+  {
+    "method": "Full Cache",
+    "method_stem": "full_cache",
+    "kv_size": 16.0,
+    "complete": true,
+    "category_scores": {
+      "SingleQA": 44.44546915979385,
+      "MultiQA": 44.182137129454425,
+      "Summarization": 29.287097772753913,
+      "Few shot": 69.52933157286932,
+      "Synthetic": 52.604166666666664,
+      "Code": 62.25700000000002
+    },
+    "average": 50.3842003835897,
+    "paper": {
+      "SingleQA": 45.29,
+      "MultiQA": 45.16,
+      "Summarization": 26.55,
+      "Few shot": 68.38,
+      "Synthetic": 59.54,
+      "Code": 46.28,
+      "Average": 50.06
+    },
+    "tasks": [
+      {
+        "category": "SingleQA",
+        "dataset": "narrativeqa",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 31.12829977057131,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_narrativeqa_full_cache_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_narrativeqa_full_cache_all.aggregate.json"
+      },
+      {
+        "category": "SingleQA",
+        "dataset": "qasper",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 46.772942051118825,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_qasper_full_cache_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_qasper_full_cache_all.aggregate.json"
+      },
+      {
+        "category": "SingleQA",
+        "dataset": "multifieldqa_en",
+        "expected": 150,
+        "unique_records": 150,
+        "records": 150,
+        "complete": true,
+        "score": 55.43516565769142,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_multifieldqa_en_full_cache_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_multifieldqa_en_full_cache_all.aggregate.json"
+      },
+      {
+        "category": "MultiQA",
+        "dataset": "hotpotqa",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 55.094470622257006,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_hotpotqa_full_cache_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_hotpotqa_full_cache_all.aggregate.json"
+      },
+      {
+        "category": "MultiQA",
+        "dataset": "2wikimqa",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 46.36190476190477,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_2wikimqa_full_cache_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_2wikimqa_full_cache_all.aggregate.json"
+      },
+      {
+        "category": "MultiQA",
+        "dataset": "musique",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 31.090036004201497,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_musique_full_cache_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_musique_full_cache_all.aggregate.json"
+      },
+      {
+        "category": "Summarization",
+        "dataset": "gov_report",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 34.978089598095366,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_gov_report_full_cache_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_gov_report_full_cache_all.aggregate.json"
+      },
+      {
+        "category": "Summarization",
+        "dataset": "qmsum",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 25.559664745651745,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_qmsum_full_cache_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_qmsum_full_cache_all.aggregate.json"
+      },
+      {
+        "category": "Summarization",
+        "dataset": "multi_news",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 27.32353897451463,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_multi_news_full_cache_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_multi_news_full_cache_all.aggregate.json"
+      },
+      {
+        "category": "Few shot",
+        "dataset": "trec",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 72.5,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_trec_full_cache_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_trec_full_cache_all.aggregate.json"
+      },
+      {
+        "category": "Few shot",
+        "dataset": "triviaqa",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 92.4824175824176,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_triviaqa_full_cache_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_triviaqa_full_cache_all.aggregate.json"
+      },
+      {
+        "category": "Few shot",
+        "dataset": "samsum",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 43.60557713619037,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_samsum_full_cache_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_samsum_full_cache_all.aggregate.json"
+      },
+      {
+        "category": "Synthetic",
+        "dataset": "passage_retrieval_en",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 99.5,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_passage_retrieval_en_full_cache_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_passage_retrieval_en_full_cache_all.aggregate.json"
+      },
+      {
+        "category": "Synthetic",
+        "dataset": "passage_count",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 5.708333333333332,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_passage_count_full_cache_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_passage_count_full_cache_all.aggregate.json"
+      },
+      {
+        "category": "Code",
+        "dataset": "lcc",
+        "expected": 500,
+        "unique_records": 500,
+        "records": 500,
+        "complete": true,
+        "score": 66.61000000000001,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_lcc_full_cache_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_lcc_full_cache_all.aggregate.json"
+      },
+      {
+        "category": "Code",
+        "dataset": "repobench-p",
+        "expected": 500,
+        "unique_records": 500,
+        "records": 500,
+        "complete": true,
+        "score": 57.90400000000003,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_repobench-p_full_cache_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_repobench-p_full_cache_all.aggregate.json"
+      }
+    ]
+  },
+  {
+    "method": "TurboQuant",
+    "method_stem": "turboquant_2_5bit",
+    "kv_size": 2.5,
+    "complete": true,
+    "category_scores": {
+      "SingleQA": 38.60541608221387,
+      "MultiQA": 36.00730828625566,
+      "Summarization": 27.53897002215126,
+      "Few shot": 67.12112530424073,
+      "Synthetic": 48.22301136363637,
+      "Code": 55.02099999999999
+    },
+    "average": 45.41947184308298,
+    "paper": {
+      "SingleQA": 44.16,
+      "MultiQA": 44.96,
+      "Summarization": 24.8,
+      "Few shot": 68.01,
+      "Synthetic": 59.65,
+      "Code": 45.76,
+      "Average": 49.44
+    },
+    "tasks": [
+      {
+        "category": "SingleQA",
+        "dataset": "narrativeqa",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 25.34588360692815,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_narrativeqa_turboquant_2_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_narrativeqa_turboquant_2_5bit_all.aggregate.json"
+      },
+      {
+        "category": "SingleQA",
+        "dataset": "qasper",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 42.43731663259061,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_qasper_turboquant_2_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_qasper_turboquant_2_5bit_all.aggregate.json"
+      },
+      {
+        "category": "SingleQA",
+        "dataset": "multifieldqa_en",
+        "expected": 150,
+        "unique_records": 150,
+        "records": 150,
+        "complete": true,
+        "score": 48.033048007122844,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_multifieldqa_en_turboquant_2_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_multifieldqa_en_turboquant_2_5bit_all.aggregate.json"
+      },
+      {
+        "category": "MultiQA",
+        "dataset": "hotpotqa",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 44.825020885547204,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_hotpotqa_turboquant_2_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_hotpotqa_turboquant_2_5bit_all.aggregate.json"
+      },
+      {
+        "category": "MultiQA",
+        "dataset": "2wikimqa",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 37.95967643467643,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_2wikimqa_turboquant_2_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_2wikimqa_turboquant_2_5bit_all.aggregate.json"
+      },
+      {
+        "category": "MultiQA",
+        "dataset": "musique",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 25.237227538543326,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_musique_turboquant_2_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_musique_turboquant_2_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Summarization",
+        "dataset": "gov_report",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 32.015826780916655,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_gov_report_turboquant_2_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_gov_report_turboquant_2_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Summarization",
+        "dataset": "qmsum",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 24.38480769580234,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_qmsum_turboquant_2_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_qmsum_turboquant_2_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Summarization",
+        "dataset": "multi_news",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 26.216275589734792,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_multi_news_turboquant_2_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_multi_news_turboquant_2_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Few shot",
+        "dataset": "trec",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 70.5,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_trec_turboquant_2_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_trec_turboquant_2_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Few shot",
+        "dataset": "triviaqa",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 89.39285714285714,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_triviaqa_turboquant_2_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_triviaqa_turboquant_2_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Few shot",
+        "dataset": "samsum",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 41.47051876986506,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_samsum_turboquant_2_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_samsum_turboquant_2_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Synthetic",
+        "dataset": "passage_retrieval_en",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 93.0,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_passage_retrieval_en_turboquant_2_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_passage_retrieval_en_turboquant_2_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Synthetic",
+        "dataset": "passage_count",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 3.446022727272727,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_passage_count_turboquant_2_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_passage_count_turboquant_2_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Code",
+        "dataset": "lcc",
+        "expected": 500,
+        "unique_records": 500,
+        "records": 500,
+        "complete": true,
+        "score": 57.03799999999998,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_lcc_turboquant_2_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_lcc_turboquant_2_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Code",
+        "dataset": "repobench-p",
+        "expected": 500,
+        "unique_records": 500,
+        "records": 500,
+        "complete": true,
+        "score": 53.003999999999984,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_repobench-p_turboquant_2_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_repobench-p_turboquant_2_5bit_all.aggregate.json"
+      }
+    ]
+  },
+  {
+    "method": "TurboQuant",
+    "method_stem": "turboquant_3_5bit",
+    "kv_size": 3.5,
+    "complete": true,
+    "category_scores": {
+      "SingleQA": 42.7270239370609,
+      "MultiQA": 43.041737258842524,
+      "Summarization": 28.724116379675745,
+      "Few shot": 68.58743038538978,
+      "Synthetic": 52.0625,
+      "Code": 61.16300000000001
+    },
+    "average": 49.38430132682816,
+    "paper": {
+      "SingleQA": 45.01,
+      "MultiQA": 45.31,
+      "Summarization": 26.0,
+      "Few shot": 68.63,
+      "Synthetic": 59.95,
+      "Code": 46.17,
+      "Average": 50.06
+    },
+    "tasks": [
+      {
+        "category": "SingleQA",
+        "dataset": "narrativeqa",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 29.247445808629674,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_narrativeqa_turboquant_3_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_narrativeqa_turboquant_3_5bit_all.aggregate.json"
+      },
+      {
+        "category": "SingleQA",
+        "dataset": "qasper",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 46.32138131353883,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_qasper_turboquant_3_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_qasper_turboquant_3_5bit_all.aggregate.json"
+      },
+      {
+        "category": "SingleQA",
+        "dataset": "multifieldqa_en",
+        "expected": 150,
+        "unique_records": 150,
+        "records": 150,
+        "complete": true,
+        "score": 52.61224468901421,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_multifieldqa_en_turboquant_3_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_multifieldqa_en_turboquant_3_5bit_all.aggregate.json"
+      },
+      {
+        "category": "MultiQA",
+        "dataset": "hotpotqa",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 54.6481573981574,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_hotpotqa_turboquant_3_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_hotpotqa_turboquant_3_5bit_all.aggregate.json"
+      },
+      {
+        "category": "MultiQA",
+        "dataset": "2wikimqa",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 44.46666666666667,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_2wikimqa_turboquant_3_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_2wikimqa_turboquant_3_5bit_all.aggregate.json"
+      },
+      {
+        "category": "MultiQA",
+        "dataset": "musique",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 30.010387711703494,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_musique_turboquant_3_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_musique_turboquant_3_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Summarization",
+        "dataset": "gov_report",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 34.07501171493783,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_gov_report_turboquant_3_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_gov_report_turboquant_3_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Summarization",
+        "dataset": "qmsum",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 25.325060418599737,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_qmsum_turboquant_3_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_qmsum_turboquant_3_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Summarization",
+        "dataset": "multi_news",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 26.77227700548967,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_multi_news_turboquant_3_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_multi_news_turboquant_3_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Few shot",
+        "dataset": "trec",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 72.0,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_trec_turboquant_3_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_trec_turboquant_3_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Few shot",
+        "dataset": "triviaqa",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 91.33571428571432,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_triviaqa_turboquant_3_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_triviaqa_turboquant_3_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Few shot",
+        "dataset": "samsum",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 42.42657687045502,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_samsum_turboquant_3_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_samsum_turboquant_3_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Synthetic",
+        "dataset": "passage_retrieval_en",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 100.0,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_passage_retrieval_en_turboquant_3_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_passage_retrieval_en_turboquant_3_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Synthetic",
+        "dataset": "passage_count",
+        "expected": 200,
+        "unique_records": 200,
+        "records": 200,
+        "complete": true,
+        "score": 4.125,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_passage_count_turboquant_3_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_passage_count_turboquant_3_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Code",
+        "dataset": "lcc",
+        "expected": 500,
+        "unique_records": 500,
+        "records": 500,
+        "complete": true,
+        "score": 64.03999999999999,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_lcc_turboquant_3_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_lcc_turboquant_3_5bit_all.aggregate.json"
+      },
+      {
+        "category": "Code",
+        "dataset": "repobench-p",
+        "expected": 500,
+        "unique_records": 500,
+        "records": 500,
+        "complete": true,
+        "score": 58.28600000000002,
+        "jsonl": "reproduce/runs/table1_official_metric/longbench_repobench-p_turboquant_3_5bit_all.jsonl",
+        "aggregate": "reproduce/runs/table1_official_metric/longbench_repobench-p_turboquant_3_5bit_all.aggregate.json"
+      }
+    ]
+  }
+]

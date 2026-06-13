@@ -1,0 +1,340 @@
+project_root: /home/liying/projects/turboquant
+reproduce_root: /home/liying/projects/turboquant/reproduce
+results_root: /home/liying/projects/turboquant/results
+hf_dataset_cache: /home/liying/datasets/turboquant/hf_cache
+models:
+  llama_3_1_8b_instruct:
+    repo_id: meta-llama/Llama-3.1-8B-Instruct
+    cache_root: /home/liying/.cache/huggingface/hub/models--meta-llama--Llama-3.1-8B-Instruct
+    snapshot: /home/liying/.cache/huggingface/hub/models--meta-llama--Llama-3.1-8B-Instruct/snapshots/0e9e39f249a16976918f6564b8830bc894c89659
+datasets:
+  longbench_e_2wikimqa:
+    repo_id: Xnhyacinth/LongBench-e
+    config: 2wikimqa
+    requested_config: 2wikimqa
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench-e/2wikimqa/0.0.0/d1bb8b7737950d2477df6d0db0a6e1537a5cd806
+    source: datasets_cache
+    num_examples: 300
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench-e/2wikimqa/0.0.0/d1bb8b7737950d2477df6d0db0a6e1537a5cd806/long_bench-e-test.arrow
+  longbench_2wikimqa:
+    repo_id: Xnhyacinth/LongBench
+    config: 2wikimqa
+    requested_config: 2wikimqa
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/2wikimqa/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5
+    source: datasets_cache
+    num_examples: 200
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/2wikimqa/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5/long_bench-test.arrow
+  needle_16k_en:
+    repo_id: ameyhengle/Multilingual-Needle-in-a-Haystack
+    config: 16k
+    split: en
+    source: datasets_cache
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869
+    num_examples: 2400
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869/multilingual-needle-in-a-haystack-en.arrow
+  dbpedia_openai3_1536:
+    repo_id: Qdrant/dbpedia-entities-openai3-text-embedding-3-large-1536-1M
+    config: default
+    split: train
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Qdrant___dbpedia-entities-openai3-text-embedding-3-large-1536-1_m/default/0.0.0/4a9731217921bc476a0f03544f11f22ae4903fa5
+    arrow_glob: /home/liying/datasets/turboquant/hf_cache/Qdrant___dbpedia-entities-openai3-text-embedding-3-large-1536-1_m/default/0.0.0/4a9731217921bc476a0f03544f11f22ae4903fa5/*.arrow
+  dbpedia_openai3_3072:
+    repo_id: Qdrant/dbpedia-entities-openai3-text-embedding-3-large-3072-1M
+    config: default
+    split: train
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Qdrant___dbpedia-entities-openai3-text-embedding-3-large-3072-1_m/default/0.0.0/b2f301648eda4c5dbe659235589c86ffec702581
+    arrow_glob: /home/liying/datasets/turboquant/hf_cache/Qdrant___dbpedia-entities-openai3-text-embedding-3-large-3072-1_m/default/0.0.0/b2f301648eda4c5dbe659235589c86ffec702581/*.arrow
+  needle_generated_length_grid_en_smoke:
+    repo_id: generated/local-needle-length-grid
+    config: needle_generated_length_grid_en_smoke
+    split: generated
+    source: generated_local
+    cache_dir: reproduce/generated_data/needle_length_grid_smoke
+    num_examples: 48
+    arrow_files:
+    - reproduce/generated_data/needle_length_grid_smoke/needle_generated_length_grid_en_smoke.arrow
+  needle_generated_length_grid_en:
+    repo_id: generated/local-needle-length-grid
+    config: needle_generated_length_grid_en
+    split: generated
+    source: generated_local
+    cache_dir: reproduce/generated_data/needle_length_grid
+    num_examples: 144
+    arrow_files:
+    - reproduce/generated_data/needle_length_grid/needle_generated_length_grid_en.arrow
+  needle_16k_ar:
+    repo_id: ameyhengle/Multilingual-Needle-in-a-Haystack
+    config: 16k
+    split: ar
+    source: datasets_cache
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869
+    num_examples: 2400
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869/multilingual-needle-in-a-haystack-ar.arrow
+  needle_16k_de:
+    repo_id: ameyhengle/Multilingual-Needle-in-a-Haystack
+    config: 16k
+    split: de
+    source: datasets_cache
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869
+    num_examples: 2400
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869/multilingual-needle-in-a-haystack-de.arrow
+  needle_16k_es:
+    repo_id: ameyhengle/Multilingual-Needle-in-a-Haystack
+    config: 16k
+    split: es
+    source: datasets_cache
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869
+    num_examples: 2400
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869/multilingual-needle-in-a-haystack-es.arrow
+  needle_16k_hi:
+    repo_id: ameyhengle/Multilingual-Needle-in-a-Haystack
+    config: 16k
+    split: hi
+    source: datasets_cache
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869
+    num_examples: 2400
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869/multilingual-needle-in-a-haystack-hi.arrow
+  needle_16k_vi:
+    repo_id: ameyhengle/Multilingual-Needle-in-a-Haystack
+    config: 16k
+    split: vi
+    source: datasets_cache
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869
+    num_examples: 2400
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869/multilingual-needle-in-a-haystack-vi.arrow
+  needle_16k_zh:
+    repo_id: ameyhengle/Multilingual-Needle-in-a-Haystack
+    config: 16k
+    split: zh
+    source: datasets_cache
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869
+    num_examples: 2400
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869/multilingual-needle-in-a-haystack-zh.arrow
+  needle_16k_all:
+    repo_id: ameyhengle/Multilingual-Needle-in-a-Haystack
+    config: 16k
+    split: all
+    source: datasets_cache
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869
+    num_examples: 16800
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869/multilingual-needle-in-a-haystack-ar.arrow
+    - /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869/multilingual-needle-in-a-haystack-de.arrow
+    - /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869/multilingual-needle-in-a-haystack-en.arrow
+    - /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869/multilingual-needle-in-a-haystack-es.arrow
+    - /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869/multilingual-needle-in-a-haystack-hi.arrow
+    - /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869/multilingual-needle-in-a-haystack-vi.arrow
+    - /home/liying/datasets/turboquant/hf_cache/ameyhengle___multilingual-needle-in-a-haystack/16k/0.0.0/ec4c18d60b7e12596a730aa3fc951fcd23578869/multilingual-needle-in-a-haystack-zh.arrow
+  longbench_narrativeqa:
+    repo_id: Xnhyacinth/LongBench
+    config: narrativeqa
+    requested_config: narrativeqa
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/narrativeqa/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5
+    source: datasets_cache
+    num_examples: 200
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/narrativeqa/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5/long_bench-test.arrow
+  longbench_qasper:
+    repo_id: Xnhyacinth/LongBench
+    config: qasper
+    requested_config: qasper
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/qasper/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5
+    source: datasets_cache
+    num_examples: 200
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/qasper/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5/long_bench-test.arrow
+  longbench_multifieldqa_en:
+    repo_id: Xnhyacinth/LongBench
+    config: multifieldqa_en
+    requested_config: multifieldqa_en
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/multifieldqa_en/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5
+    source: datasets_cache
+    num_examples: 150
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/multifieldqa_en/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5/long_bench-test.arrow
+  longbench_hotpotqa:
+    repo_id: Xnhyacinth/LongBench
+    config: hotpotqa
+    requested_config: hotpotqa
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/hotpotqa/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5
+    source: datasets_cache
+    num_examples: 200
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/hotpotqa/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5/long_bench-test.arrow
+  longbench_musique:
+    repo_id: Xnhyacinth/LongBench
+    config: musique
+    requested_config: musique
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/musique/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5
+    source: datasets_cache
+    num_examples: 200
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/musique/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5/long_bench-test.arrow
+  longbench_gov_report:
+    repo_id: Xnhyacinth/LongBench
+    config: gov_report
+    requested_config: gov_report
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/gov_report/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5
+    source: datasets_cache
+    num_examples: 200
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/gov_report/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5/long_bench-test.arrow
+  longbench_qmsum:
+    repo_id: Xnhyacinth/LongBench
+    config: qmsum
+    requested_config: qmsum
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/qmsum/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5
+    source: datasets_cache
+    num_examples: 200
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/qmsum/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5/long_bench-test.arrow
+  longbench_multi_news:
+    repo_id: Xnhyacinth/LongBench
+    config: multi_news
+    requested_config: multi_news
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/multi_news/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5
+    source: datasets_cache
+    num_examples: 200
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/multi_news/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5/long_bench-test.arrow
+  longbench_trec:
+    repo_id: Xnhyacinth/LongBench
+    config: trec
+    requested_config: trec
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/trec/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5
+    source: datasets_cache
+    num_examples: 200
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/trec/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5/long_bench-test.arrow
+  longbench_triviaqa:
+    repo_id: Xnhyacinth/LongBench
+    config: triviaqa
+    requested_config: triviaqa
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/triviaqa/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5
+    source: datasets_cache
+    num_examples: 200
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/triviaqa/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5/long_bench-test.arrow
+  longbench_samsum:
+    repo_id: Xnhyacinth/LongBench
+    config: samsum
+    requested_config: samsum
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/samsum/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5
+    source: datasets_cache
+    num_examples: 200
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/samsum/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5/long_bench-test.arrow
+  longbench_passage_retrieval_en:
+    repo_id: Xnhyacinth/LongBench
+    config: passage_retrieval_en
+    requested_config: passage_retrieval_en
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/passage_retrieval_en/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5
+    source: datasets_cache
+    num_examples: 200
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/passage_retrieval_en/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5/long_bench-test.arrow
+  longbench_passage_count:
+    repo_id: Xnhyacinth/LongBench
+    config: passage_count
+    requested_config: passage_count
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/passage_count/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5
+    source: datasets_cache
+    num_examples: 200
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/passage_count/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5/long_bench-test.arrow
+  longbench_lcc:
+    repo_id: Xnhyacinth/LongBench
+    config: lcc
+    requested_config: lcc
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/lcc/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5
+    source: datasets_cache
+    num_examples: 500
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/lcc/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5/long_bench-test.arrow
+  longbench_repobench-p:
+    repo_id: Xnhyacinth/LongBench
+    config: repobench-p
+    requested_config: repobench-p
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/repobench-p/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5
+    source: datasets_cache
+    num_examples: 500
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench/repobench-p/0.0.0/2e9ade51ebf45d98942056c0716234f9d5d257d5/long_bench-test.arrow
+  longbench_e_qasper:
+    repo_id: Xnhyacinth/LongBench-e
+    config: qasper
+    requested_config: qasper
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench-e/qasper/0.0.0/d1bb8b7737950d2477df6d0db0a6e1537a5cd806
+    source: datasets_cache
+    num_examples: 224
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench-e/qasper/0.0.0/d1bb8b7737950d2477df6d0db0a6e1537a5cd806/long_bench-e-test.arrow
+  longbench_e_multifieldqa_en:
+    repo_id: Xnhyacinth/LongBench-e
+    config: multifieldqa_en
+    requested_config: multifieldqa_en
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench-e/multifieldqa_en/0.0.0/d1bb8b7737950d2477df6d0db0a6e1537a5cd806
+    source: datasets_cache
+    num_examples: 150
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench-e/multifieldqa_en/0.0.0/d1bb8b7737950d2477df6d0db0a6e1537a5cd806/long_bench-e-test.arrow
+  longbench_e_hotpotqa:
+    repo_id: Xnhyacinth/LongBench-e
+    config: hotpotqa
+    requested_config: hotpotqa
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench-e/hotpotqa/0.0.0/d1bb8b7737950d2477df6d0db0a6e1537a5cd806
+    source: datasets_cache
+    num_examples: 300
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench-e/hotpotqa/0.0.0/d1bb8b7737950d2477df6d0db0a6e1537a5cd806/long_bench-e-test.arrow
+  longbench_e_gov_report:
+    repo_id: Xnhyacinth/LongBench-e
+    config: gov_report
+    requested_config: gov_report
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench-e/gov_report/0.0.0/d1bb8b7737950d2477df6d0db0a6e1537a5cd806
+    source: datasets_cache
+    num_examples: 300
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench-e/gov_report/0.0.0/d1bb8b7737950d2477df6d0db0a6e1537a5cd806/long_bench-e-test.arrow
+  longbench_e_multi_news:
+    repo_id: Xnhyacinth/LongBench-e
+    config: multi_news
+    requested_config: multi_news
+    split: test
+    cache_dir: /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench-e/multi_news/0.0.0/d1bb8b7737950d2477df6d0db0a6e1537a5cd806
+    source: datasets_cache
+    num_examples: 294
+    arrow_files:
+    - /home/liying/datasets/turboquant/hf_cache/Xnhyacinth___long_bench-e/multi_news/0.0.0/d1bb8b7737950d2477df6d0db0a6e1537a5cd806/long_bench-e-test.arrow
+hardware:
+  first_pass_gpu: NVIDIA GeForce RTX 4090
