@@ -1,32 +1,49 @@
 # TurboQuant Reproduction
 
-This repository is a reproduction implementation for [TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate](https://arxiv.org/abs/2504.19874), focused on the Llama-3.1-8B-Instruct LongBench Table 1 experiments for:
+This repository provides a reproduction implementation for [TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate](https://arxiv.org/abs/2504.19874), with a focus on the Llama 3.1 8B Instruct LongBench Table 1 KV cache compression experiments.
+
+The reproduced settings include:
 
 - Full Cache
-- TurboQuant 2.5-bit
-- TurboQuant 3.5-bit
+- TurboQuant 2.5 bit
+- TurboQuant 3.5 bit
 
-TurboQuant is an online, data-oblivious vector quantization method for high-dimensional vectors. It randomly rotates vectors, applies scalar Lloyd-Max quantization to the rotated coordinates for near-optimal MSE distortion, and uses a residual 1-bit QJL-style stage when unbiased inner-product estimation is needed. The paper evaluates TurboQuant on KV-cache compression for long-context LLMs and nearest-neighbor search; this repository focuses on reproducing the Llama-3.1-8B-Instruct LongBench Table 1 KV-cache results.
+TurboQuant is an online, data-oblivious vector quantization method for high-dimensional vectors. It applies randomized rotation, scalar Lloyd Max quantization on rotated coordinates, and an optional residual 1 bit QJL style correction stage for inner product estimation. The original paper evaluates TurboQuant on KV cache compression for long-context LLM inference and nearest-neighbor search. This repository focuses on the LongBench KV cache compression setting.
 
-The code implements TurboQuant KV-cache quantization, LongBench prompt formatting, LongBench-compatible scoring, experiment launch scripts, and comparison builders.
+## Scope
+
+This repository focuses on reproducing the Llama 3.1 8B Instruct LongBench Table 1 experiments. It does not attempt to reproduce every experiment in the TurboQuant paper.
+
+Implemented components include:
+
+- TurboQuant KV cache quantization
+- Full cache baseline evaluation
+- LongBench prompt formatting
+- LongBench-compatible scoring
+- experiment launch scripts
+- result aggregation scripts
+- comparison table builders
+- unit tests for quantization and cache behavior
 
 ## Repository Layout
 
 ```text
 turboquant/                 Core TurboQuant and LongBench utilities
 experiments/longbench/      LongBench generation runner
-scripts/                    Data prep, scoring, job queue, and report builders
-configs/                    Local model/dataset path configuration
+scripts/                    Data preparation, scoring, job queue, and report builders
+configs/                    Local model and dataset path configuration
 tests/                      Unit tests for quantization and cache behavior
 reproduce/                  Reproduction plans, reports, and final comparison tables
 ```
 
 Important result files:
 
-- `reproduce/TABLE1_OFFICIAL_COMPARISON.md`
-- `reproduce/TABLE1_OFFICIAL_COMPARISON.json`
-- `reproduce/TABLE1_OFFICIAL_COMPARISON.csv`
-- `reproduce/REPRODUCTION_MANIFEST.json`
+```text
+reproduce/TABLE1_OFFICIAL_COMPARISON.md
+reproduce/TABLE1_OFFICIAL_COMPARISON.json
+reproduce/TABLE1_OFFICIAL_COMPARISON.csv
+reproduce/REPRODUCTION_MANIFEST.json
+```
 
 ## Environment
 
@@ -49,42 +66,37 @@ Expected result:
 9 passed
 ```
 
-## Data And Model Preparation
+## Data and Model Preparation
 
 The reproduction uses:
 
 - Model: `meta-llama/Llama-3.1-8B-Instruct`
 - Benchmark: LongBench English Table 1 tasks
 
-The local run used Hugging Face assets stored outside the repository:
-
-```text
-/home/liying/.cache/huggingface/hub/
-/home/liying/datasets/turboquant/
-```
-
-If using `hf-mirror`, export:
-
-```bash
-export HF_ENDPOINT=https://hf-mirror.com
-```
-
-Then prepare/update LongBench cache entries:
-
-```bash
-python scripts/prepare_longbench_cache.py \
-  --cache-root /home/liying/datasets/turboquant/hf_cache \
-  --output-report reproduce/logs/longbench_cache_prepare_report.json
-```
-
-Check or edit local paths in:
+Set local model and dataset paths in:
 
 ```text
 configs/paths.yaml
 configs/llama_first.yaml
 ```
 
-## How To Run
+A typical configuration uses the following environment variables:
+
+```bash
+export HF_HOME=/path/to/huggingface/cache
+export DATA_ROOT=/path/to/turboquant/data
+export MODEL_PATH=/path/to/Llama-3.1-8B-Instruct
+```
+
+Prepare or update the LongBench cache entries:
+
+```bash
+python scripts/prepare_longbench_cache.py \
+  --cache-root "$DATA_ROOT/hf_cache" \
+  --output-report reproduce/logs/longbench_cache_prepare_report.json
+```
+
+## How to Run
 
 ### Single LongBench Task
 
@@ -97,12 +109,13 @@ python experiments/longbench/run_full_cache_eval.py \
   --cache-mode full \
   --prompt-mode longbench \
   --chat-template-mode auto \
-  --start-index 0 --end-index 200 \
+  --start-index 0 \
+  --end-index 200 \
   --output reproduce/runs/table1_official/longbench_2wikimqa_full_cache_all.jsonl \
   --progress-every 20
 ```
 
-TurboQuant 2.5-bit example:
+TurboQuant 2.5 bit example:
 
 ```bash
 python experiments/longbench/run_full_cache_eval.py \
@@ -113,12 +126,13 @@ python experiments/longbench/run_full_cache_eval.py \
   --turboquant-fast-materialized-eval \
   --prompt-mode longbench \
   --chat-template-mode auto \
-  --start-index 0 --end-index 200 \
+  --start-index 0 \
+  --end-index 200 \
   --output reproduce/runs/table1_official/longbench_2wikimqa_turboquant_2_5bit_all.jsonl \
   --progress-every 20
 ```
 
-TurboQuant 3.5-bit example:
+TurboQuant 3.5 bit example:
 
 ```bash
 python experiments/longbench/run_full_cache_eval.py \
@@ -129,12 +143,13 @@ python experiments/longbench/run_full_cache_eval.py \
   --turboquant-fast-materialized-eval \
   --prompt-mode longbench \
   --chat-template-mode auto \
-  --start-index 0 --end-index 200 \
+  --start-index 0 \
+  --end-index 200 \
   --output reproduce/runs/table1_official/longbench_2wikimqa_turboquant_3_5bit_all.jsonl \
   --progress-every 20
 ```
 
-Score a generated JSONL:
+Score a generated JSONL file:
 
 ```bash
 python scripts/summarize_jsonl_accuracy.py \
@@ -143,7 +158,7 @@ python scripts/summarize_jsonl_accuracy.py \
   --output reproduce/runs/table1_official/longbench_2wikimqa_turboquant_2_5bit_all.aggregate.json
 ```
 
-### Full Table 1
+### Full Table 1 Reproduction
 
 Run Full Cache jobs:
 
@@ -151,13 +166,13 @@ Run Full Cache jobs:
 bash scripts/run_table1_full_cache_parallel.sh
 ```
 
-Run TurboQuant queue:
+Run TurboQuant jobs:
 
 ```bash
 python scripts/queue_table1_turboquant_jobs.py
 ```
 
-Recompute official-compatible metrics for all Table 1 outputs:
+Recompute LongBench-compatible metrics for all Table 1 outputs:
 
 ```bash
 python scripts/recompute_table1_official_metrics.py \
@@ -175,9 +190,15 @@ python scripts/build_table1_official_comparison.py \
 
 ## Experimental Results
 
-Scope: `meta-llama/Llama-3.1-8B-Instruct`, LongBench-V1 English Table 1 tasks.
+Scope:
 
-### Category-Level Table
+```text
+Model: meta-llama/Llama-3.1-8B-Instruct
+Benchmark: LongBench V1 English Table 1 tasks
+Settings: Full Cache, TurboQuant 2.5 bit, TurboQuant 3.5 bit
+```
+
+### Category Level Results
 
 | Method | KV Size | Source | SingleQA | MultiQA | Summarization | Few shot | Synthetic | Code | Average |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -188,9 +209,9 @@ Scope: `meta-llama/Llama-3.1-8B-Instruct`, LongBench-V1 English Table 1 tasks.
 | TurboQuant | 3.5 | paper | 45.01 | 45.31 | 26.00 | 68.63 | 59.95 | 46.17 | 50.06 |
 | TurboQuant | 3.5 | local | 42.73 | 43.04 | 28.72 | 68.59 | 52.06 | 61.16 | 49.38 |
 
-### Task-Level Local Scores
+### Task Level Local Scores
 
-| Category | Dataset | Full Cache | TurboQuant 2.5-bit | TurboQuant 3.5-bit |
+| Category | Dataset | Full Cache | TurboQuant 2.5 bit | TurboQuant 3.5 bit |
 | --- | --- | ---: | ---: | ---: |
 | SingleQA | narrativeqa | 31.13 | 25.35 | 29.25 |
 | SingleQA | qasper | 46.77 | 42.44 | 46.32 |
@@ -214,11 +235,29 @@ Scope: `meta-llama/Llama-3.1-8B-Instruct`, LongBench-V1 English Table 1 tasks.
 | Method | Complete Tasks | Expected Tasks |
 | --- | ---: | ---: |
 | Full Cache | 16 | 16 |
-| TurboQuant 2.5-bit | 16 | 16 |
-| TurboQuant 3.5-bit | 16 | 16 |
+| TurboQuant 2.5 bit | 16 | 16 |
+| TurboQuant 3.5 bit | 16 | 16 |
 
-## Notes
+## Reproduction Notes
 
-- The final comparison table is generated by `scripts/build_table1_official_comparison.py`.
-- Scores use LongBench-compatible prompt templates, max generation lengths, and metrics.
-- Large generated outputs under `reproduce/runs/` are intentionally not tracked in git.
+The final comparison table is generated by:
+
+```bash
+python scripts/build_table1_official_comparison.py \
+  --run-root reproduce/runs/table1_official \
+  --output-prefix reproduce/TABLE1_OFFICIAL_COMPARISON
+```
+
+Scores are computed with LongBench-compatible prompt templates, maximum generation lengths, and metrics.
+
+Large generated outputs under the following directory are intentionally excluded from version control:
+
+```text
+reproduce/runs/
+```
+
+## Limitations
+
+This repository focuses on the Llama 3.1 8B Instruct LongBench Table 1 KV cache experiments. Results may differ from the paper because of environment differences, model checkpoint revisions, tokenizer or chat template behavior, decoding settings, hardware, and dependency versions.
+
+This repository does not currently include optimized low-level kernels for packed low-bit KV cache inference. The current implementation is designed for reproducible evaluation and analysis.
