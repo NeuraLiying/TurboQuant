@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from time import perf_counter
@@ -13,12 +14,18 @@ import torch
 import yaml
 from datasets import Dataset, concatenate_datasets
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers.models.llama import modeling_llama
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from turboquant.kv_cache import TurboQuantDynamicCache, make_kv_config_from_effective_bits
+from turboquant.kv_cache import (
+    OUTLIER_POLICIES,
+    TOKEN_PROTECTION_POLICIES,
+    TurboQuantDynamicCache,
+    make_kv_config_from_effective_bits,
+)
 from turboquant.longbench_metrics import category_for_dataset, score_prediction
 from turboquant.longbench_prompts import (
     build_longbench_prompt,
@@ -26,6 +33,82 @@ from turboquant.longbench_prompts import (
     max_new_tokens_for,
     should_apply_chat_template,
 )
+
+
+QUANTIZER_CHOICES = [
+    "mse",
+    "unit_mse",
+    "lsq_mse",
+    "lsq_unit_mse",
+    "gain_mse",
+    "lowbit_gain_mse",
+    "lowbit_half_gain_mse",
+    "lowbit_clipped_gain_mse",
+    "lowbit_selected_gain_mse",
+    "dot_gain_mse",
+    "hadamard_mse",
+    "centered_mse",
+    "prod",
+    "mse_block2",
+    "learned_mse_block2",
+    "learned_unit_mse_block2",
+    "uniform_token",
+    "uniform_channel",
+]
+
+
+def install_attention_error_cache_patch() -> None:
+    """Pass Llama query states into TurboQuant cache updates for saliency-aware protection."""
+
+    def forward_with_query_cache(
+        self,
+        hidden_states: torch.Tensor,
+        position_embeddings: tuple[torch.Tensor, torch.Tensor],
+        attention_mask: torch.Tensor | None,
+        past_key_value=None,
+        cache_position: torch.LongTensor | None = None,
+        **kwargs,
+    ):
+        input_shape = hidden_states.shape[:-1]
+        hidden_shape = (*input_shape, -1, self.head_dim)
+
+        query_states = self.q_proj(hidden_states).view(hidden_shape).transpose(1, 2)
+        key_states = self.k_proj(hidden_states).view(hidden_shape).transpose(1, 2)
+        value_states = self.v_proj(hidden_states).view(hidden_shape).transpose(1, 2)
+
+        cos, sin = position_embeddings
+        query_states, key_states = modeling_llama.apply_rotary_pos_emb(query_states, key_states, cos, sin)
+
+        if past_key_value is not None:
+            cache_kwargs = {
+                "sin": sin,
+                "cos": cos,
+                "cache_position": cache_position,
+                "query_states": query_states,
+                "scaling": self.scaling,
+            }
+            key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+
+        attention_interface = modeling_llama.eager_attention_forward
+        if self.config._attn_implementation != "eager":
+            attention_interface = modeling_llama.ALL_ATTENTION_FUNCTIONS[self.config._attn_implementation]
+
+        attn_output, attn_weights = attention_interface(
+            self,
+            query_states,
+            key_states,
+            value_states,
+            attention_mask,
+            dropout=0.0 if not self.training else self.attention_dropout,
+            scaling=self.scaling,
+            **kwargs,
+        )
+
+        attn_output = attn_output.reshape(*input_shape, -1).contiguous()
+        attn_output = self.o_proj(attn_output)
+        return attn_output, attn_weights
+
+    modeling_llama.LlamaAttention.forward = forward_with_query_cache
 
 
 def load_yaml(path: Path) -> dict:
@@ -79,6 +162,33 @@ def normalize_text(text: str) -> str:
     return " ".join(text.strip().lower().split())
 
 
+def is_code_completion_prompt(prompt: str, dataset_name: str | None = None) -> bool:
+    head = prompt[:2048].lower()
+    if "please complete the code given below" in head:
+        return True
+    code_markers = [
+        "public class ",
+        "def ",
+        "import ",
+        "#include",
+        "using system;",
+        "namespace ",
+        "class ",
+        "function ",
+        "src/",
+    ]
+    marker_hits = sum(marker in head for marker in code_markers)
+    return marker_hits >= 3 and ("complete the code" in head or dataset_name in {"lcc", "repobench-p"})
+
+
+def prompt_structure_features(prompt: str) -> dict[str, int]:
+    lower = prompt.lower()
+    return {
+        "passage_count": len(re.findall(r"\bpassage\s+\d+\s*:", lower)),
+        "question_marks": prompt.count("?"),
+    }
+
+
 def contains_answer(prediction: str, answers: list[str]) -> bool:
     pred = normalize_text(prediction)
     return any(normalize_text(answer) in pred for answer in answers if answer)
@@ -97,6 +207,45 @@ def load_completed(output_path: Path) -> set[str]:
     return completed
 
 
+def parse_layer_bits(text: str | None) -> tuple[float, ...] | None:
+    if text is None:
+        return None
+    values = tuple(float(part.strip()) for part in text.split(",") if part.strip())
+    if not values:
+        raise ValueError("layer bit schedule cannot be empty")
+    return values
+
+
+def parse_layer_quantizers(text: str | None) -> tuple[str, ...] | None:
+    if text is None:
+        return None
+    values = tuple(part.strip() for part in text.split(",") if part.strip())
+    if not values:
+        raise ValueError("layer quantizer schedule cannot be empty")
+    invalid = [value for value in values if value not in QUANTIZER_CHOICES]
+    if invalid:
+        raise ValueError(f"unsupported layer quantizer(s): {invalid}")
+    return values
+
+
+def load_layer_channel_scores(path: str | None, key: str) -> tuple[tuple[float, ...], ...] | None:
+    if path is None:
+        return None
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    values = data[key] if isinstance(data, dict) and key in data else data
+    if not isinstance(values, list) or not values:
+        raise ValueError(f"{key} channel scores must be a non-empty list")
+    return tuple(tuple(float(item) for item in row) for row in values)
+
+
+def resolve_quantizer_preset(baseline_mode: str, key_quantizer: str, value_quantizer: str) -> tuple[str, str]:
+    if baseline_mode == "naive_int":
+        return "uniform_token", "uniform_token"
+    if baseline_mode == "kivi_style":
+        return "uniform_channel", "uniform_token"
+    return key_quantizer, value_quantizer
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--paths", default=str(PROJECT_ROOT / "configs/paths.yaml"))
@@ -113,9 +262,66 @@ def main() -> None:
     parser.add_argument("--kv-bits", type=float, default=16.0)
     parser.add_argument("--key-bits", type=float, default=None)
     parser.add_argument("--value-bits", type=float, default=None)
-    parser.add_argument("--key-quantizer", choices=["mse", "prod"], default="mse")
-    parser.add_argument("--value-quantizer", choices=["mse", "prod"], default="mse")
+    parser.add_argument("--key-quantizer", choices=QUANTIZER_CHOICES, default="mse")
+    parser.add_argument("--value-quantizer", choices=QUANTIZER_CHOICES, default="mse")
+    parser.add_argument(
+        "--long-prompt-key-quantizer",
+        choices=QUANTIZER_CHOICES,
+        default=None,
+        help="Use this key quantizer when the encoded prompt length is greater than --long-prompt-threshold.",
+    )
+    parser.add_argument(
+        "--long-prompt-value-quantizer",
+        choices=QUANTIZER_CHOICES,
+        default=None,
+        help="Use this value quantizer when the encoded prompt length is greater than --long-prompt-threshold.",
+    )
+    parser.add_argument(
+        "--long-prompt-threshold",
+        type=int,
+        default=None,
+        help="Prompt-token threshold for switching to the long-prompt quantizers.",
+    )
+    parser.add_argument(
+        "--long-prompt-exclude-code",
+        action="store_true",
+        help="Do not switch quantizers for code-completion prompts when --long-prompt-threshold is active.",
+    )
+    parser.add_argument(
+        "--long-prompt-max-passages",
+        type=int,
+        default=None,
+        help="Do not switch quantizers when a Passage-style prompt contains more than this many passages.",
+    )
+    parser.add_argument(
+        "--long-prompt-max-question-marks",
+        type=int,
+        default=None,
+        help="Do not switch quantizers when a Passage-style prompt contains more than this many question marks.",
+    )
+    parser.add_argument(
+        "--baseline-mode",
+        choices=["turboquant", "naive_int", "kivi_style"],
+        default="turboquant",
+        help="Convenience presets: naive_int uses per-token uniform K/V; kivi_style uses per-channel K and per-token V.",
+    )
+    parser.add_argument("--layer-key-bits", default=None, help="Comma-separated key bit schedule by layer.")
+    parser.add_argument("--layer-value-bits", default=None, help="Comma-separated value bit schedule by layer.")
+    parser.add_argument("--layer-key-quantizers", default=None, help="Comma-separated key quantizer schedule by layer.")
+    parser.add_argument("--layer-value-quantizers", default=None, help="Comma-separated value quantizer schedule by layer.")
     parser.add_argument("--effective-bit-allocation", choices=["blend", "quarter_high2"], default="blend")
+    parser.add_argument("--outlier-policy", choices=sorted(OUTLIER_POLICIES), default="dynamic_absmean")
+    parser.add_argument("--key-outlier-policy", choices=sorted(OUTLIER_POLICIES), default=None)
+    parser.add_argument("--value-outlier-policy", choices=sorted(OUTLIER_POLICIES), default=None)
+    parser.add_argument("--layer-key-channel-scores", default=None, help="JSON file with per-layer key channel scores.")
+    parser.add_argument("--layer-value-channel-scores", default=None, help="JSON file with per-layer value channel scores.")
+    parser.add_argument("--sensitivity-score-power", type=float, default=1.0)
+    parser.add_argument("--token-protection-policy", choices=sorted(TOKEN_PROTECTION_POLICIES), default="none")
+    parser.add_argument("--protected-start-tokens", type=int, default=4)
+    parser.add_argument("--token-quant-bits", type=int, default=None)
+    parser.add_argument("--token-protection-target-ratio", type=float, default=None)
+    parser.add_argument("--token-protection-targets", choices=["both", "key", "value"], default="both")
+    parser.add_argument("--attention-error-query-tokens", type=int, default=1)
     parser.add_argument("--no-quantize-decode", action="store_true")
     parser.add_argument("--codebook-grid-size", type=int, default=20_001)
     parser.add_argument("--turboquant-fast-materialized-eval", action="store_true")
@@ -126,6 +332,24 @@ def main() -> None:
     parser.add_argument("--progress-every", type=int, default=1)
     parser.add_argument("--output", default=str(PROJECT_ROOT / "reproduce/runs/longbench_full_cache_eval.jsonl"))
     args = parser.parse_args()
+    if (
+        args.token_protection_policy == "attention_error_budget"
+        or args.outlier_policy == "attention_error_gain"
+        or args.key_outlier_policy == "attention_error_gain"
+        or args.value_outlier_policy == "attention_error_gain"
+    ):
+        install_attention_error_cache_patch()
+    layer_key_bits = parse_layer_bits(args.layer_key_bits)
+    layer_value_bits = parse_layer_bits(args.layer_value_bits)
+    layer_key_quantizers = parse_layer_quantizers(args.layer_key_quantizers)
+    layer_value_quantizers = parse_layer_quantizers(args.layer_value_quantizers)
+    layer_key_channel_scores = load_layer_channel_scores(args.layer_key_channel_scores, "layer_key_channel_scores")
+    layer_value_channel_scores = load_layer_channel_scores(args.layer_value_channel_scores, "layer_value_channel_scores")
+    resolved_key_quantizer, resolved_value_quantizer = resolve_quantizer_preset(
+        args.baseline_mode,
+        args.key_quantizer,
+        args.value_quantizer,
+    )
 
     paths = load_yaml(Path(args.paths))
     cfg = load_yaml(Path(args.config))
@@ -204,16 +428,59 @@ def main() -> None:
                 inputs["attention_mask"] = truncate_middle(inputs["attention_mask"], args.max_input_tokens)
             input_device = model.get_input_embeddings().weight.device
             inputs = inputs.to(input_device)
+            example_key_quantizer = resolved_key_quantizer
+            example_value_quantizer = resolved_value_quantizer
+            prompt_tokens = int(inputs["input_ids"].shape[-1])
+            code_completion_prompt = is_code_completion_prompt(prompt, dataset_name)
+            structure_features = prompt_structure_features(prompt)
+            passage_count = structure_features["passage_count"]
+            question_marks = structure_features["question_marks"]
+            passage_gate_blocked = (
+                passage_count > 0
+                and (
+                    (args.long_prompt_max_passages is not None and passage_count > args.long_prompt_max_passages)
+                    or (
+                        args.long_prompt_max_question_marks is not None
+                        and question_marks > args.long_prompt_max_question_marks
+                    )
+                )
+            )
+            if (
+                args.long_prompt_threshold is not None
+                and prompt_tokens > args.long_prompt_threshold
+                and not (args.long_prompt_exclude_code and code_completion_prompt)
+                and not passage_gate_blocked
+            ):
+                if args.long_prompt_key_quantizer is not None:
+                    example_key_quantizer = args.long_prompt_key_quantizer
+                if args.long_prompt_value_quantizer is not None:
+                    example_value_quantizer = args.long_prompt_value_quantizer
             past_key_values = None
             if args.cache_mode == "turboquant":
                 kv_cfg = make_kv_config_from_effective_bits(
                     args.kv_bits,
                     seed=idx,
                     codebook_grid_size=args.codebook_grid_size,
-                    key_quantizer=args.key_quantizer,
-                    value_quantizer=args.value_quantizer,
+                    key_quantizer=example_key_quantizer,
+                    value_quantizer=example_value_quantizer,
                     effective_bit_allocation=args.effective_bit_allocation,
+                    outlier_policy=args.outlier_policy,
+                    key_outlier_policy=args.key_outlier_policy,
+                    value_outlier_policy=args.value_outlier_policy,
                     fast_materialized_eval=args.turboquant_fast_materialized_eval,
+                    layer_key_quantizers=layer_key_quantizers,
+                    layer_value_quantizers=layer_value_quantizers,
+                    layer_key_bits=layer_key_bits,
+                    layer_value_bits=layer_value_bits,
+                    layer_key_channel_scores=layer_key_channel_scores,
+                    layer_value_channel_scores=layer_value_channel_scores,
+                    sensitivity_score_power=args.sensitivity_score_power,
+                    token_protection_policy=args.token_protection_policy,
+                    protected_start_tokens=args.protected_start_tokens,
+                    token_quant_bits=args.token_quant_bits,
+                    token_protection_target_ratio=args.token_protection_target_ratio,
+                    token_protection_targets=args.token_protection_targets,
+                    attention_error_query_tokens=args.attention_error_query_tokens,
                 )
                 kv_cfg = type(kv_cfg)(
                     key_bits=args.key_bits if args.key_bits is not None else kv_cfg.key_bits,
@@ -225,7 +492,23 @@ def main() -> None:
                     key_quantizer=kv_cfg.key_quantizer,
                     value_quantizer=kv_cfg.value_quantizer,
                     effective_bit_allocation=kv_cfg.effective_bit_allocation,
+                    outlier_policy=kv_cfg.outlier_policy,
+                    key_outlier_policy=kv_cfg.key_outlier_policy,
+                    value_outlier_policy=kv_cfg.value_outlier_policy,
                     fast_materialized_eval=kv_cfg.fast_materialized_eval,
+                    layer_key_quantizers=kv_cfg.layer_key_quantizers,
+                    layer_value_quantizers=kv_cfg.layer_value_quantizers,
+                    layer_key_bits=kv_cfg.layer_key_bits,
+                    layer_value_bits=kv_cfg.layer_value_bits,
+                    layer_key_channel_scores=kv_cfg.layer_key_channel_scores,
+                    layer_value_channel_scores=kv_cfg.layer_value_channel_scores,
+                    sensitivity_score_power=kv_cfg.sensitivity_score_power,
+                    token_protection_policy=kv_cfg.token_protection_policy,
+                    protected_start_tokens=kv_cfg.protected_start_tokens,
+                    token_quant_bits=kv_cfg.token_quant_bits,
+                    token_protection_target_ratio=kv_cfg.token_protection_target_ratio,
+                    token_protection_targets=kv_cfg.token_protection_targets,
+                    attention_error_query_tokens=kv_cfg.attention_error_query_tokens,
                 )
                 past_key_values = TurboQuantDynamicCache(kv_cfg)
             example_started = perf_counter()
@@ -284,11 +567,40 @@ def main() -> None:
                 "kv_bits": args.kv_bits,
                 "key_bits": args.key_bits,
                 "value_bits": args.value_bits,
-                "key_quantizer": args.key_quantizer,
-                "value_quantizer": args.value_quantizer,
+                "baseline_mode": args.baseline_mode,
+                "key_quantizer": past_key_values.config.key_quantizer if past_key_values is not None else args.key_quantizer,
+                "value_quantizer": past_key_values.config.value_quantizer if past_key_values is not None else args.value_quantizer,
+                "layer_key_bits": list(layer_key_bits) if layer_key_bits is not None else None,
+                "layer_value_bits": list(layer_value_bits) if layer_value_bits is not None else None,
+                "layer_key_quantizers": list(layer_key_quantizers) if layer_key_quantizers is not None else None,
+                "layer_value_quantizers": list(layer_value_quantizers) if layer_value_quantizers is not None else None,
+                "long_prompt_threshold": args.long_prompt_threshold,
+                "long_prompt_exclude_code": args.long_prompt_exclude_code,
+                "long_prompt_max_passages": args.long_prompt_max_passages,
+                "long_prompt_max_question_marks": args.long_prompt_max_question_marks,
+                "code_completion_prompt": code_completion_prompt,
+                "prompt_passage_count": passage_count,
+                "prompt_question_marks": question_marks,
+                "passage_gate_blocked": passage_gate_blocked,
+                "long_prompt_key_quantizer": args.long_prompt_key_quantizer,
+                "long_prompt_value_quantizer": args.long_prompt_value_quantizer,
+                "effective_key_quantizer": example_key_quantizer,
+                "effective_value_quantizer": example_value_quantizer,
                 "effective_bit_allocation": args.effective_bit_allocation,
+                "outlier_policy": args.outlier_policy,
+                "key_outlier_policy": args.key_outlier_policy,
+                "value_outlier_policy": args.value_outlier_policy,
+                "layer_key_channel_scores": args.layer_key_channel_scores,
+                "layer_value_channel_scores": args.layer_value_channel_scores,
+                "sensitivity_score_power": args.sensitivity_score_power,
+                "token_protection_policy": args.token_protection_policy,
+                "protected_start_tokens": args.protected_start_tokens,
+                "token_quant_bits": args.token_quant_bits,
+                "token_protection_target_ratio": args.token_protection_target_ratio,
+                "token_protection_targets": args.token_protection_targets,
+                "attention_error_query_tokens": args.attention_error_query_tokens,
                 "quantize_decode": not args.no_quantize_decode,
-                "prompt_tokens": int(inputs["input_ids"].shape[-1]),
+                "prompt_tokens": prompt_tokens,
                 "generated_tokens": int(new_tokens.shape[-1]),
                 "max_new_tokens": max_new_tokens,
                 "latency_seconds": latency,
@@ -330,9 +642,29 @@ def main() -> None:
         "kv_bits": args.kv_bits,
         "key_bits": args.key_bits,
         "value_bits": args.value_bits,
-        "key_quantizer": args.key_quantizer,
-        "value_quantizer": args.value_quantizer,
+        "baseline_mode": args.baseline_mode,
+        "key_quantizer": resolved_key_quantizer,
+        "value_quantizer": resolved_value_quantizer,
+        "layer_key_bits": list(layer_key_bits) if layer_key_bits is not None else None,
+        "layer_value_bits": list(layer_value_bits) if layer_value_bits is not None else None,
+        "layer_key_quantizers": list(layer_key_quantizers) if layer_key_quantizers is not None else None,
+        "layer_value_quantizers": list(layer_value_quantizers) if layer_value_quantizers is not None else None,
+        "long_prompt_threshold": args.long_prompt_threshold,
+        "long_prompt_key_quantizer": args.long_prompt_key_quantizer,
+        "long_prompt_value_quantizer": args.long_prompt_value_quantizer,
         "effective_bit_allocation": args.effective_bit_allocation,
+        "outlier_policy": args.outlier_policy,
+        "key_outlier_policy": args.key_outlier_policy,
+        "value_outlier_policy": args.value_outlier_policy,
+        "layer_key_channel_scores": args.layer_key_channel_scores,
+        "layer_value_channel_scores": args.layer_value_channel_scores,
+        "sensitivity_score_power": args.sensitivity_score_power,
+        "token_protection_policy": args.token_protection_policy,
+        "protected_start_tokens": args.protected_start_tokens,
+        "token_quant_bits": args.token_quant_bits,
+        "token_protection_target_ratio": args.token_protection_target_ratio,
+        "token_protection_targets": args.token_protection_targets,
+        "attention_error_query_tokens": args.attention_error_query_tokens,
         "quantize_decode": not args.no_quantize_decode,
         "device_map": args.device_map,
         "max_memory": args.max_memory,

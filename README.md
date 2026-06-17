@@ -43,6 +43,7 @@ reproduce/TABLE1_OFFICIAL_COMPARISON.md
 reproduce/TABLE1_OFFICIAL_COMPARISON.json
 reproduce/TABLE1_OFFICIAL_COMPARISON.csv
 reproduce/REPRODUCTION_MANIFEST.json
+reproduce/STRUCTURE_ADAPTIVE_LOWBIT_GAIN_RESULTS.md
 ```
 
 ## Environment
@@ -63,7 +64,7 @@ python -m pytest tests -q
 Expected result:
 
 ```text
-9 passed
+40 passed
 ```
 
 ## Data and Model Preparation
@@ -188,6 +189,45 @@ python scripts/build_table1_official_comparison.py \
   --output-prefix reproduce/TABLE1_OFFICIAL_COMPARISON
 ```
 
+### 2.5-bit Adaptive LowBit-Gain
+
+This checkpoint also includes a 2.5-bit incremental method over reproduced TurboQuant.
+The method uses `lowbit_gain_mse` only for long, non-code prompts whose Passage-style structure is not high risk; otherwise it falls back to standard TurboQuant MSE.
+
+Run a task with the adaptive quantizer gate:
+
+```bash
+python experiments/longbench/run_full_cache_eval.py \
+  --dataset-key longbench_2wikimqa \
+  --device cuda:0 \
+  --cache-mode turboquant \
+  --kv-bits 2.5 \
+  --key-quantizer mse \
+  --value-quantizer mse \
+  --long-prompt-threshold 6144 \
+  --long-prompt-key-quantizer lowbit_gain_mse \
+  --long-prompt-value-quantizer lowbit_gain_mse \
+  --long-prompt-exclude-code \
+  --long-prompt-max-passages 15 \
+  --long-prompt-max-question-marks 5 \
+  --turboquant-fast-materialized-eval \
+  --prompt-mode longbench \
+  --chat-template-mode auto \
+  --start-index 0 --end-index 200 \
+  --output reproduce/runs/incremental/structure_adaptive_lowbit_gain_2wikimqa_turboquant_2p5_full.jsonl
+```
+
+Build the Table 1 comparison from completed TurboQuant and LowBit-Gain runs:
+
+```bash
+python scripts/build_content_adaptive_lowbit_table.py \
+  --threshold 6144 \
+  --max-passages 15 \
+  --max-question-marks 5 \
+  --feature-table reproduce/incremental/prompt_gate_features_table1.json \
+  --output reproduce/incremental/structure_adaptive_lowbit_gain_threshold_6144_p15_q5_table1_comparison.json
+```
+
 ## Experimental Results
 
 Scope:
@@ -208,6 +248,15 @@ Settings: Full Cache, TurboQuant 2.5 bit, TurboQuant 3.5 bit
 | TurboQuant | 2.5 | local | 38.61 | 36.01 | 27.54 | 67.12 | 48.22 | 55.02 | 45.42 |
 | TurboQuant | 3.5 | paper | 45.01 | 45.31 | 26.00 | 68.63 | 59.95 | 46.17 | 50.06 |
 | TurboQuant | 3.5 | local | 42.73 | 43.04 | 28.72 | 68.59 | 52.06 | 61.16 | 49.38 |
+
+### 2.5-bit Incremental Result
+
+| Method | KV Size | SingleQA | MultiQA | Summarization | Few shot | Synthetic | Code | Average |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| TurboQuant | 2.5 | 38.61 | 36.01 | 27.54 | 67.12 | 48.22 | 55.02 | 45.42 |
+| Structure-Adaptive LowBit-Gain | 2.5 | 40.32 | 38.10 | 27.60 | 67.77 | 50.29 | 55.02 | 46.52 |
+
+Detailed task-level results are in `reproduce/STRUCTURE_ADAPTIVE_LOWBIT_GAIN_RESULTS.md`.
 
 ### Task Level Local Scores
 
