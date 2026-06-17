@@ -1,22 +1,28 @@
-# TurboQuant Reproduction
+# TurboQuant Reproduction and Adaptive LowBit-Gain
 
 This repository provides a reproduction implementation for [TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate](https://arxiv.org/abs/2504.19874), with a focus on the Llama 3.1 8B Instruct LongBench Table 1 KV cache compression experiments.
 
-The reproduced settings include:
+It also includes a first incremental result over the reproduced TurboQuant baseline: **Structure-Adaptive LowBit-Gain**, a prompt-structure-gated variant that improves the reproduced 2.5 bit TurboQuant average from `45.42` to `46.52` on the same LongBench Table 1 task set.
+
+The reproduced and incremental settings include:
 
 - Full Cache
 - TurboQuant 2.5 bit
 - TurboQuant 3.5 bit
+- Structure-Adaptive LowBit-Gain 2.5 bit
 
 TurboQuant is an online, data-oblivious vector quantization method for high-dimensional vectors. It applies randomized rotation, scalar Lloyd Max quantization on rotated coordinates, and an optional residual 1 bit QJL style correction stage for inner product estimation. The original paper evaluates TurboQuant on KV cache compression for long-context LLM inference and nearest-neighbor search. This repository focuses on the LongBench KV cache compression setting.
 
+Structure-Adaptive LowBit-Gain keeps the TurboQuant 2.5 bit storage budget and applies a norm-gain reconstruction only for long, non-code prompts whose Passage-style structure is not high risk. Otherwise it falls back to the reproduced TurboQuant MSE quantizer.
+
 ## Scope
 
-This repository focuses on reproducing the Llama 3.1 8B Instruct LongBench Table 1 experiments. It does not attempt to reproduce every experiment in the TurboQuant paper.
+This repository focuses on reproducing the Llama 3.1 8B Instruct LongBench Table 1 experiments and recording a first 2.5 bit incremental method on top of that reproduction. It does not attempt to reproduce every experiment in the TurboQuant paper.
 
 Implemented components include:
 
 - TurboQuant KV cache quantization
+- Structure-Adaptive LowBit-Gain KV cache quantization
 - Full cache baseline evaluation
 - LongBench prompt formatting
 - LongBench-compatible scoring
