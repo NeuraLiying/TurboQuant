@@ -12,6 +12,8 @@ The reproduced and incremental settings include:
 - Unified Regular-Gain Gate 2.5 bit
 - Unified Regular-Gain Gate 3.5 bit
 
+The results are organized in two parts. The reproduction table reports Full Cache and TurboQuant against the LongBench Table 1 categories. The incremental table then uses the reproduced TurboQuant numbers as the baseline and reports the additional Unified Regular-Gain Gate results as evidence for the method-level contribution.
+
 TurboQuant is an online, data-oblivious vector quantization method for high-dimensional vectors. It applies randomized rotation, scalar Lloyd Max quantization on rotated coordinates, and an optional residual 1 bit QJL style correction stage for inner product estimation. The original paper evaluates TurboQuant on KV cache compression for long-context LLM inference and nearest-neighbor search. This repository focuses on the LongBench KV cache compression setting.
 
 Unified Regular-Gain Gate keeps the original TurboQuant storage budgets and uses the same prompt-only rule at both bit widths. It falls back to reproduced TurboQuant MSE by default, and switches both K and V to `regular_gain_mse` only when the prompt is not code-like, has at most 12 Passage-style passages, and has at most 20 question marks.
@@ -260,7 +262,7 @@ Benchmark: LongBench V1 English Table 1 tasks
 Settings: Full Cache, TurboQuant 2.5 bit, TurboQuant 3.5 bit
 ```
 
-### Category Level Results
+### Reproduction Results
 
 | Method | KV Size | Source | SingleQA | MultiQA | Summarization | Few shot | Synthetic | Code | Average |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -271,7 +273,7 @@ Settings: Full Cache, TurboQuant 2.5 bit, TurboQuant 3.5 bit
 | TurboQuant | 3.5 | paper | 45.01 | 45.31 | 26.00 | 68.63 | 59.95 | 46.17 | 50.06 |
 | TurboQuant | 3.5 | local | 42.73 | 43.04 | 28.72 | 68.59 | 52.06 | 61.16 | 49.38 |
 
-### Incremental Result
+### Incremental Contribution Result
 
 Unified Regular-Gain Gate is evaluated on the same 16 LongBench Table 1 tasks and the same reproduced TurboQuant baselines.
 
