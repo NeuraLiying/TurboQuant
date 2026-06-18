@@ -1,0 +1,47 @@
+KV bits,Level,Name,TurboQuant,Unified Gate,Delta,Cache ratio,Activation,Complete
+2.5,category,SingleQA,38.61,38.78,0.17,0.17,0.65,True
+2.5,category,MultiQA,36.01,36.51,0.50,0.17,0.86,True
+2.5,category,Summarization,27.54,27.80,0.26,0.18,0.65,True
+2.5,category,Few shot,67.12,67.31,0.19,0.17,0.18,True
+2.5,category,Synthetic,48.22,50.28,2.05,0.17,0.99,True
+2.5,category,Code,55.02,55.02,0.00,0.17,0.00,True
+2.5,average,Average,45.42,45.95,0.53,0.17,0.56,True
+2.5,task,narrativeqa,25.35,25.46,0.11,0.17,0.07,True
+2.5,task,qasper,42.44,42.46,0.02,0.17,0.99,True
+2.5,task,multifieldqa_en,48.03,48.41,0.38,0.17,0.91,True
+2.5,task,hotpotqa,44.83,47.78,2.95,0.17,0.98,True
+2.5,task,2wikimqa,37.96,36.87,-1.09,0.17,0.99,True
+2.5,task,musique,25.24,24.87,-0.36,0.17,0.61,True
+2.5,task,gov_report,32.02,32.48,0.47,0.18,0.98,True
+2.5,task,qmsum,24.38,24.41,0.03,0.17,0.01,True
+2.5,task,multi_news,26.22,26.50,0.28,0.19,0.97,True
+2.5,task,trec,70.50,70.50,0.00,0.17,0.00,True
+2.5,task,triviaqa,89.39,89.97,0.57,0.17,0.53,True
+2.5,task,samsum,41.47,41.47,0.00,0.17,0.00,True
+2.5,task,passage_retrieval_en,93.00,96.00,3.00,0.17,1.00,True
+2.5,task,passage_count,3.45,4.56,1.11,0.17,0.98,True
+2.5,task,lcc,57.04,57.04,0.00,0.18,0.00,True
+2.5,task,repobench-p,53.00,53.00,0.00,0.17,0.00,True
+3.5,category,SingleQA,42.73,43.63,0.90,0.23,0.65,True
+3.5,category,MultiQA,43.04,43.55,0.51,0.23,0.86,True
+3.5,category,Summarization,28.72,28.72,-0.00,0.24,0.65,True
+3.5,category,Few shot,68.59,68.61,0.02,0.24,0.18,True
+3.5,category,Synthetic,52.06,51.53,-0.53,0.23,0.99,True
+3.5,category,Code,61.16,61.16,0.00,0.24,0.00,True
+3.5,average,Average,49.38,49.53,0.15,0.24,0.56,True
+3.5,task,narrativeqa,29.25,29.29,0.04,0.23,0.07,True
+3.5,task,qasper,46.32,47.60,1.27,0.23,0.99,True
+3.5,task,multifieldqa_en,52.61,54.01,1.40,0.23,0.91,True
+3.5,task,hotpotqa,54.65,54.60,-0.05,0.23,0.98,True
+3.5,task,2wikimqa,44.47,45.11,0.65,0.23,0.99,True
+3.5,task,musique,30.01,30.93,0.92,0.23,0.61,True
+3.5,task,gov_report,34.08,34.10,0.03,0.24,0.98,True
+3.5,task,qmsum,25.33,25.29,-0.04,0.24,0.01,True
+3.5,task,multi_news,26.77,26.77,-0.00,0.26,0.97,True
+3.5,task,trec,72.00,72.00,0.00,0.24,0.00,True
+3.5,task,triviaqa,91.34,91.40,0.07,0.23,0.53,True
+3.5,task,samsum,42.43,42.43,0.00,0.24,0.00,True
+3.5,task,passage_retrieval_en,100.00,99.50,-0.50,0.23,1.00,True
+3.5,task,passage_count,4.12,3.56,-0.56,0.23,0.98,True
+3.5,task,lcc,64.04,64.04,0.00,0.24,0.00,True
+3.5,task,repobench-p,58.29,58.29,0.00,0.24,0.00,True

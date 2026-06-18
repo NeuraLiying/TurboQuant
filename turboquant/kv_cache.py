@@ -28,6 +28,12 @@ QUANTIZER_KINDS = {
     "lsq_mse",
     "lsq_unit_mse",
     "gain_mse",
+    "regular_gain_mse",
+    "regular_half_gain_mse",
+    "regular_selected_gain_mse",
+    "regular_clipped_gain_mse",
+    "clipped_gain_mse",
+    "selected_gain_mse",
     "lowbit_gain_mse",
     "lowbit_half_gain_mse",
     "lowbit_clipped_gain_mse",
@@ -35,6 +41,8 @@ QUANTIZER_KINDS = {
     "dot_gain_mse",
     "hadamard_mse",
     "centered_mse",
+    "auto_mse",
+    "attention_auto_mse",
     "prod",
     "mse_block2",
     "learned_mse_block2",
@@ -47,6 +55,8 @@ OUTLIER_POLICIES = {
     "dynamic_absmean",
     "error_gain",
     "attention_error_gain",
+    "joint_error_gain",
+    "joint_attention_error_gain",
     "static_score",
     "sensitivity_error_gain",
     "head_dynamic_absmean",
@@ -534,6 +544,16 @@ class TurboQuantDynamicCache(Cache):
                         else "norm_gain"
                         if quantizer_kind == "gain_mse"
                         else "norm_gain"
+                        if quantizer_kind == "regular_gain_mse"
+                        else "half_gain"
+                        if quantizer_kind == "regular_half_gain_mse"
+                        else "clipped_gain"
+                        if quantizer_kind == "regular_clipped_gain_mse"
+                        else "clipped_gain"
+                        if quantizer_kind == "clipped_gain_mse"
+                        else "selected_gain"
+                        if quantizer_kind == "selected_gain_mse"
+                        else "norm_gain"
                         if quantizer_kind == "lowbit_gain_mse" and bits <= 2
                         else "half_gain"
                         if quantizer_kind == "lowbit_half_gain_mse" and bits <= 2
@@ -583,6 +603,13 @@ class TurboQuantDynamicCache(Cache):
                 bits=bits,
                 granularity="channel" if quantizer_kind == "uniform_channel" else "token",
             )
+        if quantizer_kind == "auto_mse":
+            return self._quantize_auto_mse_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+            )
         original_shape = tuple(states.shape)
         dimension = original_shape[-1]
         flat = states.reshape(-1, dimension)
@@ -631,6 +658,40 @@ class TurboQuantDynamicCache(Cache):
             bits=bits,
             dtype=states.dtype,
         )
+
+    def _quantize_auto_mse_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: int,
+        name: str,
+        layer_idx: int,
+    ) -> CacheSegment:
+        candidate_kinds = (
+            "mse",
+            "unit_mse",
+            "selected_gain_mse",
+            "learned_unit_mse_block2",
+        )
+        best_segment: CacheSegment | None = None
+        best_error: float | None = None
+        states_f = states.detach().to(dtype=torch.float32)
+        for candidate_kind in candidate_kinds:
+            segment = self._quantize_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind=candidate_kind,
+                layer_idx=layer_idx,
+            )
+            decoded = self._decode_segment(segment, name=name, layer_idx=layer_idx).to(dtype=torch.float32)
+            error = float(torch.mean((states_f - decoded) ** 2).item())
+            if best_error is None or error < best_error:
+                best_error = error
+                best_segment = segment
+        if best_segment is None:
+            raise RuntimeError("auto_mse did not produce a candidate segment")
+        return best_segment
 
     def _token_protected_raw_count(self, seq_len: int, *, target_bits: float, quant_bits: int) -> int:
         if seq_len <= 0:
@@ -1068,7 +1129,7 @@ class TurboQuantDynamicCache(Cache):
         policy = self._outlier_policy_for(name)
         if policy == "dynamic_absmean":
             scores = states.detach().abs().to(dtype=torch.float32).mean(dim=tuple(range(states.ndim - 1)))
-        elif policy == "error_gain":
+        elif policy in {"error_gain", "joint_error_gain"}:
             scores = self._score_error_gain_channels(
                 states,
                 regular_bits=regular_bits,
@@ -1077,7 +1138,7 @@ class TurboQuantDynamicCache(Cache):
                 quantizer_kind=quantizer_kind,
                 layer_idx=layer_idx,
             )
-        elif policy == "attention_error_gain":
+        elif policy in {"attention_error_gain", "joint_attention_error_gain"}:
             if query_states is None or key_states_for_attention is None:
                 scores = self._score_error_gain_channels(
                     states,
@@ -1123,6 +1184,251 @@ class TurboQuantDynamicCache(Cache):
         else:
             raise ValueError(f"unsupported outlier policy: {policy}")
         return torch.topk(scores, k=outlier_count, largest=True, sorted=True).indices.sort().values
+
+    @staticmethod
+    def _top_indices_from_scores(scores: torch.Tensor, count: int) -> torch.Tensor:
+        if count <= 0:
+            return torch.empty(0, device=scores.device, dtype=torch.long)
+        count = min(count, int(scores.numel()))
+        return torch.topk(scores, k=count, largest=True, sorted=True).indices.sort().values
+
+    @staticmethod
+    def _split_joint_channel_budget(
+        combined_scores: torch.Tensor,
+        *,
+        dimension: int,
+        total_budget: int,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        total_budget = max(0, min(total_budget, 2 * dimension))
+        if total_budget <= 0:
+            empty = torch.empty(0, device=combined_scores.device, dtype=torch.long)
+            return empty, empty
+        max_per_side = dimension if total_budget == 2 * dimension else max(1, dimension - 1)
+        min_per_side = 1 if total_budget >= 2 and dimension > 1 else 0
+        sorted_indices = torch.argsort(combined_scores, descending=True)
+        selected: list[int] = []
+        key_count = 0
+        value_count = 0
+        for raw_idx in sorted_indices.tolist():
+            is_key = raw_idx < dimension
+            if is_key and key_count >= max_per_side:
+                continue
+            if not is_key and value_count >= max_per_side:
+                continue
+            remaining_after = total_budget - len(selected) - 1
+            if is_key:
+                if value_count + remaining_after < min_per_side:
+                    continue
+                key_count += 1
+            else:
+                if key_count + remaining_after < min_per_side:
+                    continue
+                value_count += 1
+            selected.append(raw_idx)
+            if len(selected) == total_budget:
+                break
+        selected_tensor = torch.tensor(selected, device=combined_scores.device, dtype=torch.long)
+        key_indices = selected_tensor[selected_tensor < dimension].sort().values
+        value_indices = (selected_tensor[selected_tensor >= dimension] - dimension).sort().values
+        return key_indices, value_indices
+
+    def _build_outlier_segment_from_indices(
+        self,
+        states: torch.Tensor,
+        outlier_indices: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        quantizer_kind: str,
+        layer_idx: int,
+        regular_bits: int,
+        outlier_bits: int,
+        policy: str,
+    ) -> CacheSegment:
+        original_shape = tuple(states.shape)
+        all_indices = torch.arange(states.shape[-1], device=states.device, dtype=torch.long)
+        outlier_indices = outlier_indices.to(device=states.device, dtype=torch.long).sort().values
+        regular_mask = torch.ones(states.shape[-1], device=states.device, dtype=torch.bool)
+        regular_mask[outlier_indices] = False
+        regular_indices = all_indices[regular_mask]
+
+        regular_states = states.index_select(-1, regular_indices)
+        outlier_states = states.index_select(-1, outlier_indices)
+        regular_segment = self._quantize_to_segment(
+            regular_states,
+            bits=regular_bits,
+            name=f"{name}_regular",
+            quantizer_kind=quantizer_kind,
+            layer_idx=layer_idx,
+        )
+        outlier_segment = self._quantize_to_segment(
+            outlier_states,
+            bits=outlier_bits,
+            name=f"{name}_outlier",
+            quantizer_kind=quantizer_kind,
+            layer_idx=layer_idx,
+        )
+        if isinstance(regular_segment, RawTensorSegment) or isinstance(outlier_segment, RawTensorSegment):
+            raise RuntimeError("outlier effective-bit segments must use packed subsegments")
+
+        return OutlierMSESegment(
+            regular=regular_segment,
+            outlier=outlier_segment,
+            regular_indices=regular_indices.to(dtype=torch.int16),
+            outlier_indices=outlier_indices.to(dtype=torch.int16),
+            shape=original_shape,
+            dtype=states.dtype,
+            requested_bits=float(bits),
+            policy=policy,
+        )
+
+    def _score_joint_outlier_channels(
+        self,
+        states: torch.Tensor,
+        *,
+        regular_bits: int,
+        outlier_bits: int,
+        name: str,
+        quantizer_kind: str,
+        layer_idx: int,
+        query_states: torch.Tensor | None,
+        key_states_for_attention: torch.Tensor | None,
+        scaling: float,
+        policy: str,
+    ) -> torch.Tensor:
+        if policy == "joint_attention_error_gain":
+            if query_states is not None and key_states_for_attention is not None:
+                return self._score_attention_error_gain_channels(
+                    states,
+                    regular_bits=regular_bits,
+                    outlier_bits=outlier_bits,
+                    name=name,
+                    quantizer_kind=quantizer_kind,
+                    layer_idx=layer_idx,
+                    query_states=query_states,
+                    key_states_for_attention=key_states_for_attention,
+                    scaling=scaling,
+                )
+        return self._score_error_gain_channels(
+            states,
+            regular_bits=regular_bits,
+            outlier_bits=outlier_bits,
+            name=name,
+            quantizer_kind=quantizer_kind,
+            layer_idx=layer_idx,
+        )
+
+    def _quantize_joint_effective_to_segments(
+        self,
+        key_states: torch.Tensor,
+        value_states: torch.Tensor,
+        *,
+        key_bits: float,
+        value_bits: float,
+        key_quantizer: str,
+        value_quantizer: str,
+        layer_idx: int,
+        query_states: torch.Tensor | None,
+        scaling: float,
+        policy: str,
+    ) -> tuple[CacheSegment, CacheSegment]:
+        key_regular_bits, key_outlier_bits, key_outlier_budget = self._resolve_effective_bit_allocation(
+            key_bits, key_states.shape[-1]
+        )
+        value_regular_bits, value_outlier_bits, value_outlier_budget = self._resolve_effective_bit_allocation(
+            value_bits, value_states.shape[-1]
+        )
+        if (
+            key_outlier_budget == 0
+            or value_outlier_budget == 0
+            or key_regular_bits != value_regular_bits
+            or key_outlier_bits != value_outlier_bits
+            or key_bits != value_bits
+            or key_states.shape[-1] != value_states.shape[-1]
+        ):
+            return (
+                self._quantize_effective_to_segment(
+                    key_states,
+                    bits=key_bits,
+                    name="key",
+                    quantizer_kind=key_quantizer,
+                    layer_idx=layer_idx,
+                    query_states=query_states,
+                    key_states_for_attention=key_states,
+                    scaling=scaling,
+                ),
+                self._quantize_effective_to_segment(
+                    value_states,
+                    bits=value_bits,
+                    name="value",
+                    quantizer_kind=value_quantizer,
+                    layer_idx=layer_idx,
+                    query_states=query_states,
+                    key_states_for_attention=key_states,
+                    scaling=scaling,
+                ),
+            )
+
+        key_scores = self._score_joint_outlier_channels(
+            key_states,
+            regular_bits=key_regular_bits,
+            outlier_bits=key_outlier_bits,
+            name="key",
+            quantizer_kind=key_quantizer,
+            layer_idx=layer_idx,
+            query_states=query_states,
+            key_states_for_attention=key_states,
+            scaling=scaling,
+            policy=policy,
+        )
+        value_scores = self._score_joint_outlier_channels(
+            value_states,
+            regular_bits=value_regular_bits,
+            outlier_bits=value_outlier_bits,
+            name="value",
+            quantizer_kind=value_quantizer,
+            layer_idx=layer_idx,
+            query_states=query_states,
+            key_states_for_attention=key_states,
+            scaling=scaling,
+            policy=policy,
+        )
+        key_scores = key_scores.clamp_min(0)
+        value_scores = value_scores.clamp_min(0)
+        key_scale = key_scores.mean().clamp_min(torch.finfo(torch.float32).eps)
+        value_scale = value_scores.mean().clamp_min(torch.finfo(torch.float32).eps)
+        combined = torch.cat([key_scores / key_scale, value_scores / value_scale])
+        total_budget = key_outlier_budget + value_outlier_budget
+        dimension = key_states.shape[-1]
+        key_indices, value_indices = self._split_joint_channel_budget(
+            combined,
+            dimension=dimension,
+            total_budget=total_budget,
+        )
+
+        key_segment = self._build_outlier_segment_from_indices(
+            key_states,
+            key_indices,
+            bits=key_bits,
+            name="key",
+            quantizer_kind=key_quantizer,
+            layer_idx=layer_idx,
+            regular_bits=key_regular_bits,
+            outlier_bits=key_outlier_bits,
+            policy=policy,
+        )
+        value_segment = self._build_outlier_segment_from_indices(
+            value_states,
+            value_indices,
+            bits=value_bits,
+            name="value",
+            quantizer_kind=value_quantizer,
+            layer_idx=layer_idx,
+            regular_bits=value_regular_bits,
+            outlier_bits=value_outlier_bits,
+            policy=policy,
+        )
+        return key_segment, value_segment
 
     def _quantize_head_adaptive_effective_to_segment(
         self,
@@ -1233,13 +1539,28 @@ class TurboQuantDynamicCache(Cache):
                 layer_idx=layer_idx,
                 token_scores=token_scores,
             )
+        if quantizer_kind == "attention_auto_mse":
+            return self._quantize_attention_auto_mse_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
         regular_bits, outlier_bits, outlier_count = self._resolve_effective_bit_allocation(bits, states.shape[-1])
         if outlier_count == 0:
             return self._quantize_to_segment(
                 states,
                 bits=regular_bits,
                 name=name,
-                quantizer_kind=quantizer_kind,
+                quantizer_kind=(
+                    "mse"
+                    if quantizer_kind
+                    in {"regular_gain_mse", "regular_half_gain_mse", "regular_selected_gain_mse", "regular_clipped_gain_mse"}
+                    else quantizer_kind
+                ),
                 layer_idx=layer_idx,
             )
         if self._outlier_policy_for(name) in {"head_dynamic_absmean", "head_error_gain"}:
@@ -1278,14 +1599,29 @@ class TurboQuantDynamicCache(Cache):
             regular_states,
             bits=regular_bits,
             name=f"{name}_regular",
-            quantizer_kind=quantizer_kind,
+            quantizer_kind=(
+                "gain_mse"
+                if quantizer_kind == "regular_gain_mse"
+                else "regular_half_gain_mse"
+                if quantizer_kind == "regular_half_gain_mse"
+                else "selected_gain_mse"
+                if quantizer_kind == "regular_selected_gain_mse"
+                else "clipped_gain_mse"
+                if quantizer_kind == "regular_clipped_gain_mse"
+                else quantizer_kind
+            ),
             layer_idx=layer_idx,
         )
         outlier_segment = self._quantize_to_segment(
             outlier_states,
             bits=outlier_bits,
             name=f"{name}_outlier",
-            quantizer_kind=quantizer_kind,
+            quantizer_kind=(
+                "mse"
+                if quantizer_kind
+                in {"regular_gain_mse", "regular_half_gain_mse", "regular_selected_gain_mse", "regular_clipped_gain_mse"}
+                else quantizer_kind
+            ),
             layer_idx=layer_idx,
         )
         if isinstance(regular_segment, RawTensorSegment) or isinstance(outlier_segment, RawTensorSegment):
@@ -1301,6 +1637,93 @@ class TurboQuantDynamicCache(Cache):
             requested_bits=float(bits),
             policy=self._outlier_policy_for(name),
         )
+
+    def _attention_auto_mse_error(
+        self,
+        states: torch.Tensor,
+        states_hat: torch.Tensor,
+        *,
+        name: str,
+        query_states: torch.Tensor | None,
+        key_states_for_attention: torch.Tensor | None,
+        scaling: float,
+    ) -> float:
+        if (
+            query_states is None
+            or key_states_for_attention is None
+            or states.ndim != 4
+            or query_states.ndim != 4
+            or key_states_for_attention.ndim != 4
+        ):
+            return float(torch.mean((states.detach().to(dtype=torch.float32) - states_hat.to(dtype=torch.float32)) ** 2).item())
+        with torch.no_grad():
+            if name == "key":
+                original_scores = self._grouped_attention_scores(query_states, states, scaling=scaling)
+                candidate_scores = self._grouped_attention_scores(query_states, states_hat, scaling=scaling)
+                probs = self._causal_attention_probs(original_scores, key_len=states.shape[-2]).detach()
+                score_error = (original_scores - candidate_scores).square()
+                return float((probs * score_error).mean().item())
+            if name == "value":
+                key_scores = self._grouped_attention_scores(
+                    query_states,
+                    key_states_for_attention,
+                    scaling=scaling,
+                )
+                probs = self._causal_attention_probs(
+                    key_scores,
+                    key_len=key_states_for_attention.shape[-2],
+                ).detach()
+                value_error = (states.detach().to(dtype=torch.float32) - states_hat.to(dtype=torch.float32)).square().sum(dim=-1)
+                token_weight = probs.square().mean(dim=(2, 3))
+                return float((token_weight * value_error).mean().item())
+        return float(torch.mean((states.detach().to(dtype=torch.float32) - states_hat.to(dtype=torch.float32)) ** 2).item())
+
+    def _quantize_attention_auto_mse_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+        query_states: torch.Tensor | None,
+        key_states_for_attention: torch.Tensor | None,
+        scaling: float,
+    ) -> CacheSegment:
+        candidate_kinds = (
+            "mse",
+            "gain_mse",
+            "unit_mse",
+            "learned_unit_mse_block2",
+        )
+        best_segment: CacheSegment | None = None
+        best_error: float | None = None
+        for candidate_kind in candidate_kinds:
+            segment = self._quantize_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind=candidate_kind,
+                layer_idx=layer_idx,
+                allow_token_protection=False,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+            decoded = self._decode_segment(segment, name=name, layer_idx=layer_idx)
+            error = self._attention_auto_mse_error(
+                states,
+                decoded,
+                name=name,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+            if best_error is None or error < best_error:
+                best_error = error
+                best_segment = segment
+        if best_segment is None:
+            raise RuntimeError("attention_auto_mse did not produce a candidate segment")
+        return best_segment
 
     def _decode_segment(self, segment: CacheSegment, *, name: str, layer_idx: int) -> torch.Tensor:
         if isinstance(segment, RawTensorSegment):
@@ -1497,28 +1920,42 @@ class TurboQuantDynamicCache(Cache):
                         scaling=scaling,
                     )
 
-        key_segment = self._quantize_effective_to_segment(
-            key_states,
-            bits=key_bits,
-            name="key",
-            quantizer_kind=key_quantizer,
-            layer_idx=layer_idx,
-            token_scores=key_token_scores,
-            query_states=query_states,
-            key_states_for_attention=key_states,
-            scaling=scaling,
-        )
-        value_segment = self._quantize_effective_to_segment(
-            value_states,
-            bits=value_bits,
-            name="value",
-            quantizer_kind=value_quantizer,
-            layer_idx=layer_idx,
-            token_scores=value_token_scores,
-            query_states=query_states,
-            key_states_for_attention=key_states,
-            scaling=scaling,
-        )
+        if should_quantize and self.config.outlier_policy in {"joint_error_gain", "joint_attention_error_gain"}:
+            key_segment, value_segment = self._quantize_joint_effective_to_segments(
+                key_states,
+                value_states,
+                key_bits=key_bits,
+                value_bits=value_bits,
+                key_quantizer=key_quantizer,
+                value_quantizer=value_quantizer,
+                layer_idx=layer_idx,
+                query_states=query_states,
+                scaling=scaling,
+                policy=self.config.outlier_policy,
+            )
+        else:
+            key_segment = self._quantize_effective_to_segment(
+                key_states,
+                bits=key_bits,
+                name="key",
+                quantizer_kind=key_quantizer,
+                layer_idx=layer_idx,
+                token_scores=key_token_scores,
+                query_states=query_states,
+                key_states_for_attention=key_states,
+                scaling=scaling,
+            )
+            value_segment = self._quantize_effective_to_segment(
+                value_states,
+                bits=value_bits,
+                name="value",
+                quantizer_kind=value_quantizer,
+                layer_idx=layer_idx,
+                token_scores=value_token_scores,
+                query_states=query_states,
+                key_states_for_attention=key_states,
+                scaling=scaling,
+            )
 
         self.key_cache[layer_idx].append(key_segment)
         self.value_cache[layer_idx].append(value_segment)

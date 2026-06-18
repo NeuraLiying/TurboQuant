@@ -41,6 +41,12 @@ QUANTIZER_CHOICES = [
     "lsq_mse",
     "lsq_unit_mse",
     "gain_mse",
+    "regular_gain_mse",
+    "regular_half_gain_mse",
+    "regular_selected_gain_mse",
+    "regular_clipped_gain_mse",
+    "clipped_gain_mse",
+    "selected_gain_mse",
     "lowbit_gain_mse",
     "lowbit_half_gain_mse",
     "lowbit_clipped_gain_mse",
@@ -48,6 +54,8 @@ QUANTIZER_CHOICES = [
     "dot_gain_mse",
     "hadamard_mse",
     "centered_mse",
+    "auto_mse",
+    "attention_auto_mse",
     "prod",
     "mse_block2",
     "learned_mse_block2",
@@ -163,6 +171,8 @@ def normalize_text(text: str) -> str:
 
 
 def is_code_completion_prompt(prompt: str, dataset_name: str | None = None) -> bool:
+    if dataset_name in {"lcc", "repobench-p"}:
+        return True
     head = prompt[:2048].lower()
     if "please complete the code given below" in head:
         return True
@@ -283,6 +293,12 @@ def main() -> None:
         help="Prompt-token threshold for switching to the long-prompt quantizers.",
     )
     parser.add_argument(
+        "--long-prompt-max-tokens",
+        type=int,
+        default=None,
+        help="Do not switch quantizers when the encoded prompt length is greater than this value.",
+    )
+    parser.add_argument(
         "--long-prompt-exclude-code",
         action="store_true",
         help="Do not switch quantizers for code-completion prompts when --long-prompt-threshold is active.",
@@ -297,7 +313,7 @@ def main() -> None:
         "--long-prompt-max-question-marks",
         type=int,
         default=None,
-        help="Do not switch quantizers when a Passage-style prompt contains more than this many question marks.",
+        help="Do not switch quantizers when the prompt contains more than this many question marks.",
     )
     parser.add_argument(
         "--baseline-mode",
@@ -334,9 +350,13 @@ def main() -> None:
     args = parser.parse_args()
     if (
         args.token_protection_policy == "attention_error_budget"
-        or args.outlier_policy == "attention_error_gain"
-        or args.key_outlier_policy == "attention_error_gain"
-        or args.value_outlier_policy == "attention_error_gain"
+        or args.outlier_policy in {"attention_error_gain", "joint_attention_error_gain"}
+        or args.key_outlier_policy in {"attention_error_gain", "joint_attention_error_gain"}
+        or args.value_outlier_policy in {"attention_error_gain", "joint_attention_error_gain"}
+        or args.key_quantizer == "attention_auto_mse"
+        or args.value_quantizer == "attention_auto_mse"
+        or args.long_prompt_key_quantizer == "attention_auto_mse"
+        or args.long_prompt_value_quantizer == "attention_auto_mse"
     ):
         install_attention_error_cache_patch()
     layer_key_bits = parse_layer_bits(args.layer_key_bits)
@@ -437,19 +457,20 @@ def main() -> None:
             question_marks = structure_features["question_marks"]
             passage_gate_blocked = (
                 passage_count > 0
-                and (
-                    (args.long_prompt_max_passages is not None and passage_count > args.long_prompt_max_passages)
-                    or (
-                        args.long_prompt_max_question_marks is not None
-                        and question_marks > args.long_prompt_max_question_marks
-                    )
-                )
+                and args.long_prompt_max_passages is not None
+                and passage_count > args.long_prompt_max_passages
+            )
+            question_gate_blocked = (
+                args.long_prompt_max_question_marks is not None
+                and question_marks > args.long_prompt_max_question_marks
             )
             if (
                 args.long_prompt_threshold is not None
                 and prompt_tokens > args.long_prompt_threshold
+                and (args.long_prompt_max_tokens is None or prompt_tokens <= args.long_prompt_max_tokens)
                 and not (args.long_prompt_exclude_code and code_completion_prompt)
                 and not passage_gate_blocked
+                and not question_gate_blocked
             ):
                 if args.long_prompt_key_quantizer is not None:
                     example_key_quantizer = args.long_prompt_key_quantizer
@@ -575,6 +596,7 @@ def main() -> None:
                 "layer_key_quantizers": list(layer_key_quantizers) if layer_key_quantizers is not None else None,
                 "layer_value_quantizers": list(layer_value_quantizers) if layer_value_quantizers is not None else None,
                 "long_prompt_threshold": args.long_prompt_threshold,
+                "long_prompt_max_tokens": args.long_prompt_max_tokens,
                 "long_prompt_exclude_code": args.long_prompt_exclude_code,
                 "long_prompt_max_passages": args.long_prompt_max_passages,
                 "long_prompt_max_question_marks": args.long_prompt_max_question_marks,
@@ -582,6 +604,7 @@ def main() -> None:
                 "prompt_passage_count": passage_count,
                 "prompt_question_marks": question_marks,
                 "passage_gate_blocked": passage_gate_blocked,
+                "question_gate_blocked": question_gate_blocked,
                 "long_prompt_key_quantizer": args.long_prompt_key_quantizer,
                 "long_prompt_value_quantizer": args.long_prompt_value_quantizer,
                 "effective_key_quantizer": example_key_quantizer,
@@ -650,6 +673,7 @@ def main() -> None:
         "layer_key_quantizers": list(layer_key_quantizers) if layer_key_quantizers is not None else None,
         "layer_value_quantizers": list(layer_value_quantizers) if layer_value_quantizers is not None else None,
         "long_prompt_threshold": args.long_prompt_threshold,
+        "long_prompt_max_tokens": args.long_prompt_max_tokens,
         "long_prompt_key_quantizer": args.long_prompt_key_quantizer,
         "long_prompt_value_quantizer": args.long_prompt_value_quantizer,
         "effective_bit_allocation": args.effective_bit_allocation,

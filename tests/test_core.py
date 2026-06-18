@@ -430,6 +430,69 @@ def test_fractional_bits_support_attention_error_gain_outlier_policy():
     assert cache.compression_summary()["outlier_policy"] == "attention_error_gain"
 
 
+def test_joint_error_gain_reallocates_shared_kv_outlier_budget():
+    torch.manual_seed(13)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        outlier_policy="joint_error_gain",
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 4, 16)
+    value = torch.randn(1, 2, 4, 16)
+
+    cache.update(key, value, layer_idx=0)
+    key_segment = cache.key_cache[0][0]
+    value_segment = cache.value_cache[0][0]
+
+    assert isinstance(key_segment, OutlierMSESegment)
+    assert isinstance(value_segment, OutlierMSESegment)
+    assert key_segment.policy == "joint_error_gain"
+    assert value_segment.policy == "joint_error_gain"
+    assert key_segment.outlier_indices.numel() + value_segment.outlier_indices.numel() == 16
+    assert key_segment.regular_indices.numel() > 0
+    assert value_segment.regular_indices.numel() > 0
+    summary = cache.compression_summary()
+    assert summary["avg_effective_index_bits"] == 2.5
+    assert summary["outlier_policy"] == "joint_error_gain"
+
+
+def test_joint_attention_error_gain_uses_same_budget_at_3p5_bits():
+    torch.manual_seed(17)
+    cfg = make_kv_config_from_effective_bits(
+        3.5,
+        codebook_grid_size=10_001,
+        outlier_policy="joint_attention_error_gain",
+        attention_error_query_tokens=2,
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 6, 16)
+    value = torch.randn(1, 2, 6, 16)
+    query = torch.randn(1, 4, 6, 16)
+
+    key_out, value_out = cache.update(
+        key,
+        value,
+        layer_idx=0,
+        cache_kwargs={"query_states": query, "scaling": 16**-0.5},
+    )
+    key_segment = cache.key_cache[0][0]
+    value_segment = cache.value_cache[0][0]
+
+    assert key_out.shape == key.shape
+    assert value_out.shape == value.shape
+    assert isinstance(key_segment, OutlierMSESegment)
+    assert isinstance(value_segment, OutlierMSESegment)
+    assert key_segment.policy == "joint_attention_error_gain"
+    assert value_segment.policy == "joint_attention_error_gain"
+    assert key_segment.regular_bits == 3
+    assert key_segment.outlier_bits == 4
+    assert value_segment.regular_bits == 3
+    assert value_segment.outlier_bits == 4
+    assert key_segment.outlier_indices.numel() + value_segment.outlier_indices.numel() == 16
+    assert cache.compression_summary()["avg_effective_index_bits"] == 3.5
+
+
 def test_lowbit_gain_only_applies_to_two_bit_subsegments():
     cfg = make_kv_config_from_effective_bits(
         2.5,
@@ -521,6 +584,118 @@ def test_lowbit_gain_variants_only_apply_to_two_bit_subsegments():
         assert outlier
         assert all(getattr(quantizer, attribute) > 1.0 for quantizer in regular)
         assert all(getattr(quantizer, attribute) == 1.0 for quantizer in outlier)
+
+
+def test_selected_gain_mse_applies_to_all_effective_bit_subsegments():
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="selected_gain_mse",
+        value_quantizer="selected_gain_mse",
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 4, 16)
+    value = torch.randn(1, 2, 4, 16)
+
+    cache.update(key, value, layer_idx=0)
+    quantizers = cache._quantizers
+    regular = [
+        quantizer
+        for (kind, name, dimension, dtype, bits, layer_idx, device_type, device_index), quantizer in quantizers.items()
+        if kind == "selected_gain_mse" and bits == 2
+    ]
+    outlier = [
+        quantizer
+        for (kind, name, dimension, dtype, bits, layer_idx, device_type, device_index), quantizer in quantizers.items()
+        if kind == "selected_gain_mse" and bits == 3
+    ]
+
+    assert regular
+    assert outlier
+    assert all(getattr(quantizer, "selected_gain") > 1.0 for quantizer in regular)
+    assert all(getattr(quantizer, "selected_gain") > 1.0 for quantizer in outlier)
+
+
+def test_regular_gain_mse_applies_only_to_fractional_regular_subsegments():
+    for quantizer_kind, expected_regular_kind in [
+        ("regular_gain_mse", "gain_mse"),
+        ("regular_half_gain_mse", "regular_half_gain_mse"),
+        ("regular_selected_gain_mse", "selected_gain_mse"),
+        ("regular_clipped_gain_mse", "clipped_gain_mse"),
+    ]:
+        for bits, regular_bits, outlier_bits in [(2.5, 2, 3), (3.5, 3, 4)]:
+            cfg = make_kv_config_from_effective_bits(
+                bits,
+                codebook_grid_size=10_001,
+                key_quantizer=quantizer_kind,
+                value_quantizer=quantizer_kind,
+            )
+            cache = TurboQuantDynamicCache(cfg)
+            key = torch.randn(1, 2, 4, 16)
+            value = torch.randn(1, 2, 4, 16)
+
+            cache.update(key, value, layer_idx=0)
+            quantizers = cache._quantizers
+            regular = [
+                quantizer
+                for (kind, name, dimension, dtype, qbits, layer_idx, device_type, device_index), quantizer in quantizers.items()
+                if kind == expected_regular_kind and qbits == regular_bits
+            ]
+            outlier = [
+                quantizer
+                for (kind, name, dimension, dtype, qbits, layer_idx, device_type, device_index), quantizer in quantizers.items()
+                if kind == "mse" and qbits == outlier_bits
+            ]
+
+            assert regular
+            assert outlier
+            if quantizer_kind == "regular_selected_gain_mse":
+                assert all(getattr(quantizer, "selected_gain") > 1.0 for quantizer in regular)
+            elif quantizer_kind == "regular_clipped_gain_mse":
+                assert all(getattr(quantizer, "clipped_gain_max") > 1.0 for quantizer in regular)
+            else:
+                assert all(getattr(quantizer, "reconstruction_gain") > 1.0 for quantizer in regular)
+            assert all(getattr(quantizer, "reconstruction_gain") == 1.0 for quantizer in outlier)
+            assert cache.compression_summary()["avg_effective_index_bits"] == bits
+
+
+def test_auto_mse_keeps_fractional_bit_budget():
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="auto_mse",
+        value_quantizer="auto_mse",
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 4, 16)
+    value = torch.randn(1, 2, 4, 16)
+
+    cache.update(key, value, layer_idx=0)
+    summary = cache.compression_summary()
+
+    assert summary["regular_bits"] == [2]
+    assert summary["outlier_bits"] == [3]
+    assert summary["avg_effective_index_bits"] == 2.5
+
+
+def test_attention_auto_mse_keeps_fractional_bit_budget_with_queries():
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="attention_auto_mse",
+        value_quantizer="attention_auto_mse",
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 4, 16)
+    value = torch.randn(1, 2, 4, 16)
+    query = torch.randn(1, 2, 4, 16)
+
+    cache.update(key, value, layer_idx=0, cache_kwargs={"query_states": query, "scaling": 0.25})
+    summary = cache.compression_summary()
+
+    assert summary["regular_bits"] == [2]
+    assert summary["outlier_bits"] == [3]
+    assert summary["avg_effective_index_bits"] == 2.5
 
 
 def test_layer_quantizer_schedule_selects_per_layer_quantizers():
