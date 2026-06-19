@@ -1700,3 +1700,48 @@ Analysis:
 - The paired rotated-domain family has now failed under hard sharing, independent sharing, attention-error guarding, and entropy guarding.
 
 Decision: reject this rotation-gated family for now. The next candidate should move away from shared K/V rotation gates and inspect other core reconstruction/preconditioning signals that already show full-task gains at one bit width without being prompt gates.
+
+### R31: Rate-Hadamard Value MSE
+
+Purpose: build a stronger method-level increment around TurboQuant's core value rotation/preconditioning path. This candidate combines two previously isolated signals: conservative per-vector value outlier-Hadamard is useful at 2.5-bit, while late-layer value outlier-Hadamard is useful at 3.5-bit. The goal is a single quantizer rule that improves both reported TurboQuant bit budgets without using a prompt gate or searching for an intermediate bit-width.
+
+Run configuration:
+
+```text
+quantizer=rate_hadamard_value_mse
+K path: TurboQuant MSE for all layers and rates
+V path, bits < 3.0: margin_vector_outlier_hadamard_mse
+V path, bits >= 3.0 and layer_idx >= 16: outlier_hadamard_mse
+V path, bits >= 3.0 and layer_idx < 16: TurboQuant MSE
+outlier_hadamard_block_size=16
+same quantizer name and code path for 2.5-bit and 3.5-bit
+```
+
+Validation:
+
+```text
+/home/liying/miniconda3/envs/turboquant/bin/python -m pytest tests/test_core.py -q
+91 passed
+```
+
+Full MultiQA results:
+
+| Method | KV bits | HotpotQA | 2WikiMQA | MuSiQue | MultiQA Avg | Delta vs TQ MultiQA | Decision |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| TurboQuant | 2.5 | 44.83 | 37.96 | 25.24 | 36.01 | +0.00 | baseline |
+| Rate-Hadamard Value MSE | 2.5 | 49.05 | 38.88 | 23.54 | 37.16 | +1.15 | expand |
+| TurboQuant | 3.5 | 54.65 | 44.47 | 30.01 | 43.04 | +0.00 | baseline |
+| Rate-Hadamard Value MSE | 3.5 | 56.00 | 46.09 | 29.11 | 43.73 | +0.69 | expand |
+
+Artifacts:
+
+- `reproduce/runs/incremental/rate_hadamard_value_mse_{hotpotqa,2wikimqa,musique}_turboquant_{2p5,3p5}_full.jsonl`
+- `reproduce/incremental/rate_hadamard_value_mse_multiqa_progress.md`
+- `reproduce/incremental/rate_hadamard_value_mse_multiqa_progress.json`
+- `reproduce/incremental/RATE_HADAMARD_VALUE_MSE_RESULTS.md`
+
+Analysis:
+
+- This is the first Hadamard/value-preconditioning branch in the current search that improves the full MultiQA average at both 2.5-bit and 3.5-bit.
+- The method is still not a complete Table 1 result. It should be expanded to all 16 tasks before making a reportable full-benchmark claim.
+- MuSiQue regresses at both bit widths, so the Table 1 expansion is necessary to test whether the HotpotQA/2WikiMQA gains generalize enough to offset task-level failures.

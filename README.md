@@ -1,21 +1,21 @@
 # TurboQuant Reproduction and Incremental KV Quantization Experiments
 
-This repository provides a reproduction implementation for [TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate](https://arxiv.org/abs/2504.19874), with a focus on the Llama 3.1 8B Instruct LongBench Table 1 KV cache compression experiments.
+This repository provides a reproduction implementation for [TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate](https://arxiv.org/abs/2504.19874), with a focus on the Llama 3.1 8B Instruct LongBench Table 1 KV cache compression experiments. It also records incremental KV quantization experiments built on top of the reproduced TurboQuant baseline.
 
-It also records incremental experiments over the reproduced TurboQuant baseline. The currently complete reportable increment is **Unified Regular-Gain Gate**, one prompt-structure-gated method applied to both the 2.5-bit and 3.5-bit TurboQuant settings. On the same LongBench Table 1 task set, it improves the reproduced TurboQuant average from `45.42` to `45.95` at 2.5 bits and from `49.38` to `49.53` at 3.5 bits.
-
-The repository separates results into two groups, and they should be read separately:
+The repository separates results into two groups:
 
 - Reproduction baselines: Full Cache, TurboQuant 2.5 bit, TurboQuant 3.5 bit. These are the local reproduction of the paper's Table 1 setup.
-- Incremental methods: Unified Regular-Gain Gate 2.5/3.5 bit, plus the ongoing Rate-Regime MSE method branch. These are additional experiments over the reproduced TurboQuant baseline, not replacements for the reproduction table.
+- Incremental methods: additional methods evaluated against the reproduced TurboQuant outputs. The complete Table 1 increment is **Unified Regular-Gain Gate**. The current core-method direction is **Rate-Hadamard Value MSE**, a rate-aware value Hadamard preconditioning rule with complete MultiQA evidence at both 2.5-bit and 3.5-bit.
 
-The results are organized in two parts. The reproduction table reports Full Cache and TurboQuant against the LongBench Table 1 categories. The incremental table then uses the reproduced TurboQuant numbers as the baseline and reports the additional Unified Regular-Gain Gate results as evidence for the method-level contribution.
+The results should be read in two parts. The reproduction table reports Full Cache and TurboQuant against the LongBench Table 1 categories. The incremental tables then use the reproduced TurboQuant numbers as baselines and report additional method results as evidence for the contribution.
 
 TurboQuant is an online, data-oblivious vector quantization method for high-dimensional vectors. It applies randomized rotation, scalar Lloyd Max quantization on rotated coordinates, and an optional residual 1 bit QJL style correction stage for inner product estimation. The original paper evaluates TurboQuant on KV cache compression for long-context LLM inference and nearest-neighbor search. This repository focuses on the LongBench KV cache compression setting.
 
 Unified Regular-Gain Gate keeps the original TurboQuant storage budgets and uses the same prompt-only rule at both bit widths. It falls back to reproduced TurboQuant MSE by default, and switches both K and V to `regular_gain_mse` only when the prompt is not code-like, has at most 12 Passage-style passages, and has at most 20 question marks.
 
-Rate-Regime MSE is a newer method-level branch that changes the reconstruction/preconditioning path rather than using a prompt gate. It uses norm-gain scalar TurboQuant in the lower-rate regime and learned unit-block reconstruction in the higher-rate regime. Its 3.5-bit Table 1 run is complete and improves the reproduced TurboQuant average from `49.38` to `49.86`; the 2.5-bit full Table 1 run is still in progress, with completed category/task results recorded as additional evidence rather than a final claim.
+Rate-Regime MSE changes the reconstruction/preconditioning path rather than using a prompt gate. It uses norm-gain scalar TurboQuant in the lower-rate regime and learned unit-block reconstruction in the higher-rate regime. Its 3.5-bit Table 1 run is complete and improves the reproduced TurboQuant average from `49.38` to `49.86`; the 2.5-bit full Table 1 run is incomplete, with completed category/task results recorded as additional evidence rather than a final claim.
+
+Rate-Hadamard Value MSE is the current method-level direction. It keeps K on reproduced TurboQuant MSE and changes only the V path: at low rate it uses a conservative per-vector value Hadamard preconditioner, while at higher rate it applies value Hadamard preconditioning only in later decoder layers. On the full MultiQA group, it improves the reproduced TurboQuant average from `36.01` to `37.16` at 2.5 bits and from `43.04` to `43.73` at 3.5 bits.
 
 ## Scope
 
@@ -25,6 +25,7 @@ Implemented components include:
 
 - TurboQuant KV cache quantization
 - prompt-gated incremental KV cache quantization
+- rate-aware value Hadamard KV cache quantization
 - Full cache baseline evaluation
 - LongBench prompt formatting
 - LongBench-compatible scoring
@@ -54,6 +55,8 @@ reproduce/REPRODUCTION_MANIFEST.json
 reproduce/incremental/UNIFIED_REGULAR_GAIN_GATE_FINAL.md
 reproduce/incremental/unified_regular_gain_gate_table1_runner.md
 reproduce/incremental/rate_regime_mse_table1.md
+reproduce/incremental/RATE_HADAMARD_VALUE_MSE_RESULTS.md
+reproduce/incremental/rate_hadamard_value_mse_multiqa_progress.md
 reproduce/INCREMENTAL_EXPERIMENTS.md
 reproduce/STRUCTURE_ADAPTIVE_LOWBIT_GAIN_RESULTS.md
 ```
@@ -76,7 +79,7 @@ python -m pytest tests -q
 Expected result:
 
 ```text
-89 passed
+91 passed
 ```
 
 ## Data and Model Preparation
@@ -292,6 +295,45 @@ python scripts/build_method_table1.py \
   --output-prefix reproduce/incremental/rate_regime_mse_table1
 ```
 
+### Rate-Hadamard Value MSE
+
+Rate-Hadamard Value MSE is the current core-method increment. It uses one quantizer name for both bit budgets:
+
+```bash
+python experiments/longbench/run_full_cache_eval.py \
+  --dataset-key longbench_2wikimqa \
+  --device cuda:0 \
+  --cache-mode turboquant \
+  --kv-bits 2.5 \
+  --key-quantizer rate_hadamard_value_mse \
+  --value-quantizer rate_hadamard_value_mse \
+  --outlier-hadamard-block-size 16 \
+  --turboquant-fast-materialized-eval \
+  --prompt-mode longbench \
+  --chat-template-mode auto \
+  --start-index 0 --end-index 200 \
+  --output reproduce/runs/incremental/rate_hadamard_value_mse_2wikimqa_turboquant_2p5_full.jsonl
+```
+
+Queue the full Table 1 task set for both bit widths:
+
+```bash
+python scripts/queue_method_table1_jobs.py \
+  --method-name rate_hadamard_value_mse \
+  --key-quantizer rate_hadamard_value_mse \
+  --value-quantizer rate_hadamard_value_mse
+```
+
+Build the current comparison table:
+
+```bash
+python scripts/build_method_table1.py \
+  --method-name rate_hadamard_value_mse \
+  --display-name "Rate-Hadamard Value MSE" \
+  --description "Rate-aware value Hadamard preconditioning: keep K on TurboQuant MSE; at low rate use conservative per-vector value outlier-Hadamard, and at higher rate apply value outlier-Hadamard only in later decoder layers." \
+  --output-prefix reproduce/incremental/rate_hadamard_value_mse_multiqa_progress
+```
+
 ## Experimental Results
 
 Scope:
@@ -300,7 +342,7 @@ Scope:
 Model: meta-llama/Llama-3.1-8B-Instruct
 Benchmark: LongBench V1 English Table 1 tasks
 Reproduction settings: Full Cache, TurboQuant 2.5 bit, TurboQuant 3.5 bit
-Incremental settings: Unified Regular-Gain Gate, Rate-Regime MSE
+Incremental settings: Unified Regular-Gain Gate, Rate-Regime MSE, Rate-Hadamard Value MSE
 ```
 
 ### Reproduction Results
@@ -330,6 +372,19 @@ Unified Regular-Gain Gate is evaluated on the same 16 LongBench Table 1 tasks an
 | Unified Regular-Gain Gate | 3.5 | 43.63 | 43.55 | 28.72 | 68.61 | 51.53 | 61.16 | 49.53 |
 
 Detailed task-level results are in `reproduce/incremental/UNIFIED_REGULAR_GAIN_GATE_FINAL.md`.
+
+### Current Rate-Hadamard Value MSE Evidence
+
+This table is an additional incremental result over the reproduced TurboQuant baseline. It is complete for the MultiQA group and uses the same quantizer rule for 2.5-bit and 3.5-bit runs.
+
+| Method | KV bits | HotpotQA | 2WikiMQA | MuSiQue | MultiQA Avg |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| TurboQuant | 2.5 | 44.83 | 37.96 | 25.24 | 36.01 |
+| Rate-Hadamard Value MSE | 2.5 | 49.05 | 38.88 | 23.54 | 37.16 |
+| TurboQuant | 3.5 | 54.65 | 44.47 | 30.01 | 43.04 |
+| Rate-Hadamard Value MSE | 3.5 | 56.00 | 46.09 | 29.11 | 43.73 |
+
+Detailed method notes and artifacts are in `reproduce/incremental/RATE_HADAMARD_VALUE_MSE_RESULTS.md`.
 
 ### Additional Rate-Regime MSE Evidence
 
@@ -429,6 +484,8 @@ Full Rate-Regime progress and generated CSV/JSON are in `reproduce/incremental/r
 
 ### Run Completeness
 
+For Rate-Hadamard Value MSE, the rows below report the completed MultiQA evidence currently included in this checkpoint.
+
 | Method | Complete Tasks | Expected Tasks |
 | --- | ---: | ---: |
 | Full Cache | 16 | 16 |
@@ -438,6 +495,8 @@ Full Rate-Regime progress and generated CSV/JSON are in `reproduce/incremental/r
 | Unified Regular-Gain Gate 3.5 bit | 16 | 16 |
 | Rate-Regime MSE 2.5 bit | 10 | 16 |
 | Rate-Regime MSE 3.5 bit | 16 | 16 |
+| Rate-Hadamard Value MSE 2.5 bit, MultiQA | 3 | 3 |
+| Rate-Hadamard Value MSE 3.5 bit, MultiQA | 3 | 3 |
 
 ## Reproduction Notes
 

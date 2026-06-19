@@ -93,6 +93,8 @@ QUANTIZER_CHOICES = [
     "distortion_regime_mse",
     "gain_unit_regime_mse",
     "rate_regime_mse",
+    "hadamard_rate_regime_mse",
+    "rate_hadamard_value_mse",
     "prod",
     "mse_block2",
     "learned_mse_block2",

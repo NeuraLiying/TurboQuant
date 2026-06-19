@@ -81,6 +81,8 @@ QUANTIZER_KINDS = {
     "distortion_regime_mse",
     "gain_unit_regime_mse",
     "rate_regime_mse",
+    "hadamard_rate_regime_mse",
+    "rate_hadamard_value_mse",
     "prod",
     "mse_block2",
     "learned_mse_block2",
@@ -938,6 +940,40 @@ class TurboQuantDynamicCache(Cache):
                 bits=bits,
                 name=name,
                 quantizer_kind="gain_mse" if bits <= 2 else "learned_unit_mse_block2",
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "hadamard_rate_regime_mse":
+            return self._quantize_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind=(
+                    "margin_vector_outlier_hadamard_mse"
+                    if bits <= 2 and name == "value"
+                    else "mse"
+                    if bits <= 2
+                    else "learned_unit_mse_block2"
+                ),
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "rate_hadamard_value_mse":
+            if name == "value" and bits <= 2:
+                target_quantizer = "margin_vector_outlier_hadamard_mse"
+            elif name == "value" and layer_idx >= 16:
+                target_quantizer = "outlier_hadamard_mse"
+            else:
+                target_quantizer = "mse"
+            return self._quantize_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind=target_quantizer,
                 layer_idx=layer_idx,
                 query_states=query_states,
                 key_states_for_attention=key_states_for_attention,
@@ -1988,6 +2024,42 @@ class TurboQuantDynamicCache(Cache):
                 bits=bits,
                 name=name,
                 quantizer_kind="gain_mse" if bits < 3.0 else "learned_unit_mse_block2",
+                layer_idx=layer_idx,
+                allow_token_protection=allow_token_protection,
+                token_scores=token_scores,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "hadamard_rate_regime_mse":
+            if bits < 3.0:
+                target_quantizer = "margin_vector_outlier_hadamard_mse" if name == "value" else "mse"
+            else:
+                target_quantizer = "learned_unit_mse_block2"
+            return self._quantize_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind=target_quantizer,
+                layer_idx=layer_idx,
+                allow_token_protection=allow_token_protection,
+                token_scores=token_scores,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "rate_hadamard_value_mse":
+            if name == "value" and bits < 3.0:
+                target_quantizer = "margin_vector_outlier_hadamard_mse"
+            elif name == "value" and layer_idx >= 16:
+                target_quantizer = "outlier_hadamard_mse"
+            else:
+                target_quantizer = "mse"
+            return self._quantize_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind=target_quantizer,
                 layer_idx=layer_idx,
                 allow_token_protection=allow_token_protection,
                 token_scores=token_scores,

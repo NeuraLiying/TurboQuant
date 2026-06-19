@@ -1169,6 +1169,124 @@ def test_rate_regime_mse_switches_by_requested_effective_bits():
     assert high_cache.compression_summary()["avg_effective_index_bits"] == 3.5
 
 
+def test_hadamard_rate_regime_mse_uses_lowrate_value_hadamard_and_highrate_unit_blocks():
+    torch.manual_seed(247)
+    key = torch.randn(1, 2, 8, 16)
+    value = torch.randn(1, 2, 8, 16)
+
+    low_cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="hadamard_rate_regime_mse",
+        value_quantizer="hadamard_rate_regime_mse",
+        outlier_hadamard_block_size=8,
+    )
+    low_cache = TurboQuantDynamicCache(low_cfg)
+    low_key, low_value = low_cache.update(key, value, layer_idx=0)
+    low_key_segment = low_cache.key_cache[0][0]
+    low_value_segment = low_cache.value_cache[0][0]
+
+    assert low_key.shape == key.shape
+    assert low_value.shape == value.shape
+    assert isinstance(low_key_segment, OutlierMSESegment)
+    assert isinstance(low_key_segment.regular, PackedMSESegment)
+    assert low_key_segment.regular.quantizer_kind == "mse"
+    assert isinstance(low_value_segment, OutlierMSESegment)
+    assert isinstance(
+        low_value_segment.regular,
+        (PackedMSESegment, OutlierHadamardSegment, VectorAdaptiveRotationSegment),
+    )
+    assert isinstance(
+        low_value_segment.outlier,
+        (PackedMSESegment, OutlierHadamardSegment, VectorAdaptiveRotationSegment),
+    )
+    assert low_cache.compression_summary()["avg_effective_index_bits"] == 2.5
+
+    high_cfg = make_kv_config_from_effective_bits(
+        3.5,
+        codebook_grid_size=10_001,
+        key_quantizer="hadamard_rate_regime_mse",
+        value_quantizer="hadamard_rate_regime_mse",
+        outlier_hadamard_block_size=8,
+    )
+    high_cache = TurboQuantDynamicCache(high_cfg)
+    high_key, high_value = high_cache.update(key, value, layer_idx=0)
+    high_key_segment = high_cache.key_cache[0][0]
+    high_value_segment = high_cache.value_cache[0][0]
+
+    assert high_key.shape == key.shape
+    assert high_value.shape == value.shape
+    for segment in (high_key_segment, high_value_segment):
+        assert isinstance(segment, OutlierMSESegment)
+        assert isinstance(segment.regular, PackedMSESegment)
+        assert isinstance(segment.outlier, PackedMSESegment)
+        assert segment.regular.quantizer_kind == "learned_unit_mse_block2"
+        assert segment.regular.bits == 3
+        assert segment.regular.block_size == 2
+        assert segment.outlier.quantizer_kind == "learned_unit_mse_block2"
+        assert segment.outlier.bits == 4
+        assert segment.outlier.block_size == 2
+    assert high_cache.compression_summary()["avg_effective_index_bits"] == 3.5
+
+
+def test_rate_hadamard_value_mse_uses_lowrate_margin_and_late_highrate_value_hadamard():
+    torch.manual_seed(248)
+    key = torch.randn(1, 2, 8, 16)
+    value = torch.randn(1, 2, 8, 16)
+
+    low_cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="rate_hadamard_value_mse",
+        value_quantizer="rate_hadamard_value_mse",
+        outlier_hadamard_block_size=8,
+    )
+    low_cache = TurboQuantDynamicCache(low_cfg)
+    low_cache.update(key, value, layer_idx=0)
+    low_key_segment = low_cache.key_cache[0][0]
+    low_value_segment = low_cache.value_cache[0][0]
+
+    assert isinstance(low_key_segment, OutlierMSESegment)
+    assert isinstance(low_key_segment.regular, PackedMSESegment)
+    assert low_key_segment.regular.quantizer_kind == "mse"
+    assert isinstance(low_value_segment, OutlierMSESegment)
+    assert isinstance(
+        low_value_segment.regular,
+        (PackedMSESegment, OutlierHadamardSegment, VectorAdaptiveRotationSegment),
+    )
+    assert low_cache.compression_summary()["avg_effective_index_bits"] == 2.5
+
+    high_cfg = make_kv_config_from_effective_bits(
+        3.5,
+        codebook_grid_size=10_001,
+        key_quantizer="rate_hadamard_value_mse",
+        value_quantizer="rate_hadamard_value_mse",
+        outlier_hadamard_block_size=8,
+    )
+    high_cache = TurboQuantDynamicCache(high_cfg)
+    high_cache.update(key, value, layer_idx=0)
+    high_cache.update(key, value, layer_idx=16)
+
+    early_key_segment = high_cache.key_cache[0][0]
+    early_value_segment = high_cache.value_cache[0][0]
+    late_key_segment = high_cache.key_cache[16][0]
+    late_value_segment = high_cache.value_cache[16][0]
+
+    assert isinstance(early_key_segment, OutlierMSESegment)
+    assert isinstance(early_key_segment.regular, PackedMSESegment)
+    assert early_key_segment.regular.quantizer_kind == "mse"
+    assert isinstance(early_value_segment, OutlierMSESegment)
+    assert isinstance(early_value_segment.regular, PackedMSESegment)
+    assert early_value_segment.regular.quantizer_kind == "mse"
+    assert isinstance(late_key_segment, OutlierMSESegment)
+    assert isinstance(late_key_segment.regular, PackedMSESegment)
+    assert late_key_segment.regular.quantizer_kind == "mse"
+    assert isinstance(late_value_segment, OutlierMSESegment)
+    assert isinstance(late_value_segment.regular, OutlierHadamardSegment)
+    assert isinstance(late_value_segment.outlier, OutlierHadamardSegment)
+    assert high_cache.compression_summary()["avg_effective_index_bits"] == 3.5
+
+
 def test_auto_mse_keeps_fractional_bit_budget():
     cfg = make_kv_config_from_effective_bits(
         2.5,
