@@ -13,6 +13,8 @@ The reproduction baseline is fixed in:
 
 The reproduced Table 1 settings are:
 
+These results are the local reproduction target. Incremental methods are reported separately below and should be compared against the reproduced TurboQuant rows rather than merged into the reproduction baseline.
+
 | Method | KV bits | Complete Tasks | Average |
 | --- | ---: | ---: | ---: |
 | Full Cache | 16.0 | 16 / 16 | 50.38 |

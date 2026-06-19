@@ -4,10 +4,10 @@ This repository provides a reproduction implementation for [TurboQuant: Online V
 
 It also records incremental experiments over the reproduced TurboQuant baseline. The currently complete reportable increment is **Unified Regular-Gain Gate**, one prompt-structure-gated method applied to both the 2.5-bit and 3.5-bit TurboQuant settings. On the same LongBench Table 1 task set, it improves the reproduced TurboQuant average from `45.42` to `45.95` at 2.5 bits and from `49.38` to `49.53` at 3.5 bits.
 
-The repository separates results into two groups:
+The repository separates results into two groups, and they should be read separately:
 
-- Reproduction baselines: Full Cache, TurboQuant 2.5 bit, TurboQuant 3.5 bit.
-- Incremental methods: Unified Regular-Gain Gate 2.5/3.5 bit, plus the ongoing Rate-Regime MSE method branch.
+- Reproduction baselines: Full Cache, TurboQuant 2.5 bit, TurboQuant 3.5 bit. These are the local reproduction of the paper's Table 1 setup.
+- Incremental methods: Unified Regular-Gain Gate 2.5/3.5 bit, plus the ongoing Rate-Regime MSE method branch. These are additional experiments over the reproduced TurboQuant baseline, not replacements for the reproduction table.
 
 The results are organized in two parts. The reproduction table reports Full Cache and TurboQuant against the LongBench Table 1 categories. The incremental table then uses the reproduced TurboQuant numbers as the baseline and reports the additional Unified Regular-Gain Gate results as evidence for the method-level contribution.
 
@@ -305,6 +305,8 @@ Incremental settings: Unified Regular-Gain Gate, Rate-Regime MSE
 
 ### Reproduction Results
 
+This table is the reproduction target: Full Cache and TurboQuant on the same LongBench Table 1 category grouping used by the paper.
+
 | Method | KV Size | Source | SingleQA | MultiQA | Summarization | Few shot | Synthetic | Code | Average |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Full Cache | 16.0 | paper | 45.29 | 45.16 | 26.55 | 68.38 | 59.54 | 46.28 | 50.06 |
@@ -315,6 +317,8 @@ Incremental settings: Unified Regular-Gain Gate, Rate-Regime MSE
 | TurboQuant | 3.5 | local | 42.73 | 43.04 | 28.72 | 68.59 | 52.06 | 61.16 | 49.38 |
 
 ### Incremental Contribution Result
+
+This table is separate from the reproduction target. It reports the additional method results over the reproduced TurboQuant baselines and serves as evidence for the incremental contribution.
 
 Unified Regular-Gain Gate is evaluated on the same 16 LongBench Table 1 tasks and the same reproduced TurboQuant baselines.
 
