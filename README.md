@@ -1,22 +1,21 @@
-# TurboQuant Reproduction and Unified Regular-Gain Gate
+# TurboQuant Reproduction and Incremental KV Quantization Experiments
 
 This repository provides a reproduction implementation for [TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate](https://arxiv.org/abs/2504.19874), with a focus on the Llama 3.1 8B Instruct LongBench Table 1 KV cache compression experiments.
 
-It also includes an incremental result over the reproduced TurboQuant baseline: **Unified Regular-Gain Gate**, one prompt-structure-gated method applied to both the 2.5-bit and 3.5-bit TurboQuant settings. On the same LongBench Table 1 task set, it improves the reproduced TurboQuant average from `45.42` to `45.95` at 2.5 bits and from `49.38` to `49.53` at 3.5 bits.
+It also records incremental experiments over the reproduced TurboQuant baseline. The currently complete reportable increment is **Unified Regular-Gain Gate**, one prompt-structure-gated method applied to both the 2.5-bit and 3.5-bit TurboQuant settings. On the same LongBench Table 1 task set, it improves the reproduced TurboQuant average from `45.42` to `45.95` at 2.5 bits and from `49.38` to `49.53` at 3.5 bits.
 
-The reproduced and incremental settings include:
+The repository separates results into two groups:
 
-- Full Cache
-- TurboQuant 2.5 bit
-- TurboQuant 3.5 bit
-- Unified Regular-Gain Gate 2.5 bit
-- Unified Regular-Gain Gate 3.5 bit
+- Reproduction baselines: Full Cache, TurboQuant 2.5 bit, TurboQuant 3.5 bit.
+- Incremental methods: Unified Regular-Gain Gate 2.5/3.5 bit, plus the ongoing Rate-Regime MSE method branch.
 
 The results are organized in two parts. The reproduction table reports Full Cache and TurboQuant against the LongBench Table 1 categories. The incremental table then uses the reproduced TurboQuant numbers as the baseline and reports the additional Unified Regular-Gain Gate results as evidence for the method-level contribution.
 
 TurboQuant is an online, data-oblivious vector quantization method for high-dimensional vectors. It applies randomized rotation, scalar Lloyd Max quantization on rotated coordinates, and an optional residual 1 bit QJL style correction stage for inner product estimation. The original paper evaluates TurboQuant on KV cache compression for long-context LLM inference and nearest-neighbor search. This repository focuses on the LongBench KV cache compression setting.
 
 Unified Regular-Gain Gate keeps the original TurboQuant storage budgets and uses the same prompt-only rule at both bit widths. It falls back to reproduced TurboQuant MSE by default, and switches both K and V to `regular_gain_mse` only when the prompt is not code-like, has at most 12 Passage-style passages, and has at most 20 question marks.
+
+Rate-Regime MSE is a newer method-level branch that changes the reconstruction/preconditioning path rather than using a prompt gate. It uses norm-gain scalar TurboQuant in the lower-rate regime and learned unit-block reconstruction in the higher-rate regime. Its 3.5-bit Table 1 run is complete and improves the reproduced TurboQuant average from `49.38` to `49.86`; the 2.5-bit full Table 1 run is still in progress, with completed category/task results recorded as additional evidence rather than a final claim.
 
 ## Scope
 
@@ -54,6 +53,8 @@ reproduce/TABLE1_OFFICIAL_COMPARISON.csv
 reproduce/REPRODUCTION_MANIFEST.json
 reproduce/incremental/UNIFIED_REGULAR_GAIN_GATE_FINAL.md
 reproduce/incremental/unified_regular_gain_gate_table1_runner.md
+reproduce/incremental/rate_regime_mse_table1.md
+reproduce/INCREMENTAL_EXPERIMENTS.md
 reproduce/STRUCTURE_ADAPTIVE_LOWBIT_GAIN_RESULTS.md
 ```
 
@@ -75,7 +76,7 @@ python -m pytest tests -q
 Expected result:
 
 ```text
-46 passed
+89 passed
 ```
 
 ## Data and Model Preparation
@@ -252,6 +253,45 @@ python scripts/build_unified_regular_gain_gate_table.py \
   --output-prefix reproduce/incremental/unified_regular_gain_gate_table1_runner
 ```
 
+### Rate-Regime MSE
+
+Rate-Regime MSE is run as a direct quantizer replacement for both K and V:
+
+```bash
+python experiments/longbench/run_full_cache_eval.py \
+  --dataset-key longbench_2wikimqa \
+  --device cuda:0 \
+  --cache-mode turboquant \
+  --kv-bits 3.5 \
+  --key-quantizer rate_regime_mse \
+  --value-quantizer rate_regime_mse \
+  --turboquant-fast-materialized-eval \
+  --prompt-mode longbench \
+  --chat-template-mode auto \
+  --start-index 0 --end-index 200 \
+  --output reproduce/runs/incremental/rate_regime_mse_2wikimqa_turboquant_3p5_full.jsonl
+```
+
+Queue Table 1 jobs for one bit width:
+
+```bash
+python scripts/queue_method_table1_jobs.py \
+  --method-name rate_regime_mse \
+  --key-quantizer rate_regime_mse \
+  --value-quantizer rate_regime_mse \
+  --bits 3p5
+```
+
+Build the current Table 1 comparison:
+
+```bash
+python scripts/build_method_table1.py \
+  --method-name rate_regime_mse \
+  --display-name "Rate-Regime MSE" \
+  --description "Rate-regime rotated-domain reconstruction: use norm-gain scalar TurboQuant at low target rate and learned unit block TurboQuant at higher target rate." \
+  --output-prefix reproduce/incremental/rate_regime_mse_table1
+```
+
 ## Experimental Results
 
 Scope:
@@ -259,7 +299,8 @@ Scope:
 ```text
 Model: meta-llama/Llama-3.1-8B-Instruct
 Benchmark: LongBench V1 English Table 1 tasks
-Settings: Full Cache, TurboQuant 2.5 bit, TurboQuant 3.5 bit
+Reproduction settings: Full Cache, TurboQuant 2.5 bit, TurboQuant 3.5 bit
+Incremental settings: Unified Regular-Gain Gate, Rate-Regime MSE
 ```
 
 ### Reproduction Results
@@ -285,6 +326,60 @@ Unified Regular-Gain Gate is evaluated on the same 16 LongBench Table 1 tasks an
 | Unified Regular-Gain Gate | 3.5 | 43.63 | 43.55 | 28.72 | 68.61 | 51.53 | 61.16 | 49.53 |
 
 Detailed task-level results are in `reproduce/incremental/UNIFIED_REGULAR_GAIN_GATE_FINAL.md`.
+
+### Additional Rate-Regime MSE Evidence
+
+Rate-Regime MSE is evaluated against the same reproduced TurboQuant baselines. The 3.5-bit Table 1 run is complete. The 2.5-bit run is still in progress, so the table below reports only complete categories/tasks for 2.5-bit and does not assign a full Table 1 average.
+
+| KV bits | Complete Tasks | TurboQuant Avg | Rate-Regime MSE Avg | Delta |
+| ---: | ---: | ---: | ---: | ---: |
+| 2.5 | 10 / 16 | in progress | in progress | in progress |
+| 3.5 | 16 / 16 | 49.38 | 49.86 | +0.48 |
+
+#### Rate-Regime 3.5-Bit Category Scores
+
+| Category | TurboQuant 3.5 bit | Rate-Regime MSE 3.5 bit | Delta |
+| --- | ---: | ---: | ---: |
+| SingleQA | 42.73 | 43.41 | +0.68 |
+| MultiQA | 43.04 | 43.16 | +0.12 |
+| Summarization | 28.72 | 28.67 | -0.05 |
+| Few shot | 68.59 | 68.92 | +0.34 |
+| Synthetic | 52.06 | 52.97 | +0.91 |
+| Code | 61.16 | 62.05 | +0.89 |
+| Average | 49.38 | 49.86 | +0.48 |
+
+#### Rate-Regime Task-Level Scores
+
+| KV bits | Category | Dataset | Records | TurboQuant | Rate-Regime MSE | Delta | Complete |
+| ---: | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 2.5 | SingleQA | narrativeqa | 200/200 | 25.35 | 24.23 | -1.12 | yes |
+| 2.5 | SingleQA | qasper | 200/200 | 42.44 | 44.30 | +1.86 | yes |
+| 2.5 | SingleQA | multifieldqa_en | 150/150 | 48.03 | 47.03 | -1.00 | yes |
+| 2.5 | MultiQA | hotpotqa | 200/200 | 44.83 | 46.49 | +1.67 | yes |
+| 2.5 | MultiQA | 2wikimqa | 200/200 | 37.96 | 38.49 | +0.53 | yes |
+| 2.5 | MultiQA | musique | 200/200 | 25.24 | 24.68 | -0.56 | yes |
+| 2.5 | Summarization | qmsum | 200/200 | 24.38 | 24.34 | -0.04 | yes |
+| 2.5 | Few shot | trec | 200/200 | 70.50 | 72.00 | +1.50 | yes |
+| 2.5 | Few shot | triviaqa | 200/200 | 89.39 | 89.49 | +0.09 | yes |
+| 2.5 | Synthetic | passage_count | 200/200 | 3.45 | 2.64 | -0.81 | yes |
+| 3.5 | SingleQA | narrativeqa | 200/200 | 29.25 | 28.22 | -1.03 | yes |
+| 3.5 | SingleQA | qasper | 200/200 | 46.32 | 46.04 | -0.29 | yes |
+| 3.5 | SingleQA | multifieldqa_en | 150/150 | 52.61 | 55.96 | +3.35 | yes |
+| 3.5 | MultiQA | hotpotqa | 200/200 | 54.65 | 55.10 | +0.46 | yes |
+| 3.5 | MultiQA | 2wikimqa | 200/200 | 44.47 | 45.24 | +0.77 | yes |
+| 3.5 | MultiQA | musique | 200/200 | 30.01 | 29.13 | -0.88 | yes |
+| 3.5 | Summarization | gov_report | 200/200 | 34.08 | 34.46 | +0.39 | yes |
+| 3.5 | Summarization | qmsum | 200/200 | 25.33 | 24.83 | -0.50 | yes |
+| 3.5 | Summarization | multi_news | 200/200 | 26.77 | 26.73 | -0.04 | yes |
+| 3.5 | Few shot | trec | 200/200 | 72.00 | 71.50 | -0.50 | yes |
+| 3.5 | Few shot | triviaqa | 200/200 | 91.34 | 91.09 | -0.25 | yes |
+| 3.5 | Few shot | samsum | 200/200 | 42.43 | 44.18 | +1.75 | yes |
+| 3.5 | Synthetic | passage_retrieval_en | 200/200 | 100.00 | 99.50 | -0.50 | yes |
+| 3.5 | Synthetic | passage_count | 200/200 | 4.12 | 6.44 | +2.31 | yes |
+| 3.5 | Code | lcc | 500/500 | 64.04 | 65.25 | +1.21 | yes |
+| 3.5 | Code | repobench-p | 500/500 | 58.29 | 58.85 | +0.57 | yes |
+
+Full Rate-Regime progress and generated CSV/JSON are in `reproduce/incremental/rate_regime_mse_table1.md`.
 
 ### Task Level Local Scores
 
@@ -337,6 +432,8 @@ Detailed task-level results are in `reproduce/incremental/UNIFIED_REGULAR_GAIN_G
 | TurboQuant 3.5 bit | 16 | 16 |
 | Unified Regular-Gain Gate 2.5 bit | 16 | 16 |
 | Unified Regular-Gain Gate 3.5 bit | 16 | 16 |
+| Rate-Regime MSE 2.5 bit | 10 | 16 |
+| Rate-Regime MSE 3.5 bit | 16 | 16 |
 
 ## Reproduction Notes
 

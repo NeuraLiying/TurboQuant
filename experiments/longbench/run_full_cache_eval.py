@@ -45,6 +45,8 @@ QUANTIZER_CHOICES = [
     "regular_half_gain_mse",
     "regular_selected_gain_mse",
     "regular_clipped_gain_mse",
+    "adaptive_regular_gain_mse",
+    "attention_adaptive_regular_gain_mse",
     "clipped_gain_mse",
     "selected_gain_mse",
     "lowbit_gain_mse",
@@ -53,9 +55,44 @@ QUANTIZER_CHOICES = [
     "lowbit_selected_gain_mse",
     "dot_gain_mse",
     "hadamard_mse",
+    "srht_mse",
+    "calibrated_rotation_mse",
+    "head_rotation_mse",
+    "head_hadamard_mse",
+    "outlier_hadamard_mse",
+    "attention_adaptive_outlier_hadamard_mse",
+    "attention_outlier_hadamard_mse",
+    "bitwidth_attention_outlier_hadamard_mse",
+    "entropy_guarded_outlier_hadamard_mse",
+    "adaptive_outlier_hadamard_mse",
+    "vector_adaptive_outlier_hadamard_mse",
+    "margin_vector_outlier_hadamard_mse",
+    "hadamard_residual_mse",
+    "attention_hadamard_residual_mse",
+    "attention_weighted_hadamard_residual_mse",
+    "regular_outlier_hadamard_mse",
+    "outlier_only_hadamard_mse",
+    "attention_scale_mse",
+    "regular_attention_scale_mse",
+    "rotation_bank_mse",
+    "attention_rotation_bank_mse",
+    "segment_rotation_bank_mse",
+    "rotated_outlier_mse",
+    "attention_rotated_outlier_mse",
+    "attention_adaptive_rotated_outlier_mse",
+    "attention_adaptive_paired_rotated_outlier_mse",
+    "entropy_guarded_paired_rotated_outlier_mse",
+    "calibrated_rotated_outlier_mse",
+    "paired_rotated_outlier_mse",
+    "shared_rotated_outlier_mse",
+    "rms_rotation_mse",
+    "rms_regular_gain_mse",
     "centered_mse",
     "auto_mse",
     "attention_auto_mse",
+    "distortion_regime_mse",
+    "gain_unit_regime_mse",
+    "rate_regime_mse",
     "prod",
     "mse_block2",
     "learned_mse_block2",
@@ -226,6 +263,15 @@ def parse_layer_bits(text: str | None) -> tuple[float, ...] | None:
     return values
 
 
+def parse_layer_ints(text: str | None) -> tuple[int, ...] | None:
+    if text is None:
+        return None
+    values = tuple(int(part.strip()) for part in text.split(",") if part.strip())
+    if not values:
+        raise ValueError("layer integer schedule cannot be empty")
+    return values
+
+
 def parse_layer_quantizers(text: str | None) -> tuple[str, ...] | None:
     if text is None:
         return None
@@ -246,6 +292,19 @@ def load_layer_channel_scores(path: str | None, key: str) -> tuple[tuple[float, 
     if not isinstance(values, list) or not values:
         raise ValueError(f"{key} channel scores must be a non-empty list")
     return tuple(tuple(float(item) for item in row) for row in values)
+
+
+def load_layer_rotation_matrices(path: str | None, key: str) -> tuple[tuple[tuple[float, ...], ...], ...] | None:
+    if path is None:
+        return None
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    values = data[key] if isinstance(data, dict) and key in data else data
+    if not isinstance(values, list) or not values:
+        raise ValueError(f"{key} rotation matrices must be a non-empty list")
+    return tuple(
+        tuple(tuple(float(item) for item in matrix_row) for matrix_row in matrix)
+        for matrix in values
+    )
 
 
 def resolve_quantizer_preset(baseline_mode: str, key_quantizer: str, value_quantizer: str) -> tuple[str, str]:
@@ -270,6 +329,7 @@ def main() -> None:
     parser.add_argument("--offload-folder", default=str(PROJECT_ROOT / "reproduce/offload"))
     parser.add_argument("--cache-mode", choices=["full", "turboquant"], default="full")
     parser.add_argument("--kv-bits", type=float, default=16.0)
+    parser.add_argument("--fixed-kv-seed", type=int, default=None)
     parser.add_argument("--key-bits", type=float, default=None)
     parser.add_argument("--value-bits", type=float, default=None)
     parser.add_argument("--key-quantizer", choices=QUANTIZER_CHOICES, default="mse")
@@ -325,12 +385,16 @@ def main() -> None:
     parser.add_argument("--layer-value-bits", default=None, help="Comma-separated value bit schedule by layer.")
     parser.add_argument("--layer-key-quantizers", default=None, help="Comma-separated key quantizer schedule by layer.")
     parser.add_argument("--layer-value-quantizers", default=None, help="Comma-separated value quantizer schedule by layer.")
+    parser.add_argument("--layer-key-rotation-indices", default=None, help="Comma-separated key rotation seed index schedule.")
+    parser.add_argument("--layer-value-rotation-indices", default=None, help="Comma-separated value rotation seed index schedule.")
     parser.add_argument("--effective-bit-allocation", choices=["blend", "quarter_high2"], default="blend")
     parser.add_argument("--outlier-policy", choices=sorted(OUTLIER_POLICIES), default="dynamic_absmean")
     parser.add_argument("--key-outlier-policy", choices=sorted(OUTLIER_POLICIES), default=None)
     parser.add_argument("--value-outlier-policy", choices=sorted(OUTLIER_POLICIES), default=None)
     parser.add_argument("--layer-key-channel-scores", default=None, help="JSON file with per-layer key channel scores.")
     parser.add_argument("--layer-value-channel-scores", default=None, help="JSON file with per-layer value channel scores.")
+    parser.add_argument("--layer-key-rotation-matrices", default=None, help="JSON file with per-layer key rotation matrices.")
+    parser.add_argument("--layer-value-rotation-matrices", default=None, help="JSON file with per-layer value rotation matrices.")
     parser.add_argument("--sensitivity-score-power", type=float, default=1.0)
     parser.add_argument("--token-protection-policy", choices=sorted(TOKEN_PROTECTION_POLICIES), default="none")
     parser.add_argument("--protected-start-tokens", type=int, default=4)
@@ -338,6 +402,9 @@ def main() -> None:
     parser.add_argument("--token-protection-target-ratio", type=float, default=None)
     parser.add_argument("--token-protection-targets", choices=["both", "key", "value"], default="both")
     parser.add_argument("--attention-error-query-tokens", type=int, default=1)
+    parser.add_argument("--attention-entropy-threshold", type=float, default=0.80)
+    parser.add_argument("--rotation-bank-size", type=int, default=4)
+    parser.add_argument("--outlier-hadamard-block-size", type=int, default=16)
     parser.add_argument("--no-quantize-decode", action="store_true")
     parser.add_argument("--codebook-grid-size", type=int, default=20_001)
     parser.add_argument("--turboquant-fast-materialized-eval", action="store_true")
@@ -357,14 +424,80 @@ def main() -> None:
         or args.value_quantizer == "attention_auto_mse"
         or args.long_prompt_key_quantizer == "attention_auto_mse"
         or args.long_prompt_value_quantizer == "attention_auto_mse"
+        or args.key_quantizer == "attention_hadamard_residual_mse"
+        or args.value_quantizer == "attention_hadamard_residual_mse"
+        or args.long_prompt_key_quantizer == "attention_hadamard_residual_mse"
+        or args.long_prompt_value_quantizer == "attention_hadamard_residual_mse"
+        or args.key_quantizer == "attention_weighted_hadamard_residual_mse"
+        or args.value_quantizer == "attention_weighted_hadamard_residual_mse"
+        or args.long_prompt_key_quantizer == "attention_weighted_hadamard_residual_mse"
+        or args.long_prompt_value_quantizer == "attention_weighted_hadamard_residual_mse"
+        or args.key_quantizer == "attention_outlier_hadamard_mse"
+        or args.value_quantizer == "attention_outlier_hadamard_mse"
+        or args.long_prompt_key_quantizer == "attention_outlier_hadamard_mse"
+        or args.long_prompt_value_quantizer == "attention_outlier_hadamard_mse"
+        or args.key_quantizer == "attention_adaptive_outlier_hadamard_mse"
+        or args.value_quantizer == "attention_adaptive_outlier_hadamard_mse"
+        or args.long_prompt_key_quantizer == "attention_adaptive_outlier_hadamard_mse"
+        or args.long_prompt_value_quantizer == "attention_adaptive_outlier_hadamard_mse"
+        or args.key_quantizer == "bitwidth_attention_outlier_hadamard_mse"
+        or args.value_quantizer == "bitwidth_attention_outlier_hadamard_mse"
+        or args.long_prompt_key_quantizer == "bitwidth_attention_outlier_hadamard_mse"
+        or args.long_prompt_value_quantizer == "bitwidth_attention_outlier_hadamard_mse"
+        or args.key_quantizer == "entropy_guarded_outlier_hadamard_mse"
+        or args.value_quantizer == "entropy_guarded_outlier_hadamard_mse"
+        or args.long_prompt_key_quantizer == "entropy_guarded_outlier_hadamard_mse"
+        or args.long_prompt_value_quantizer == "entropy_guarded_outlier_hadamard_mse"
+        or args.key_quantizer == "attention_rotation_bank_mse"
+        or args.value_quantizer == "attention_rotation_bank_mse"
+        or args.long_prompt_key_quantizer == "attention_rotation_bank_mse"
+        or args.long_prompt_value_quantizer == "attention_rotation_bank_mse"
+        or args.key_quantizer == "attention_rotated_outlier_mse"
+        or args.value_quantizer == "attention_rotated_outlier_mse"
+        or args.long_prompt_key_quantizer == "attention_rotated_outlier_mse"
+        or args.long_prompt_value_quantizer == "attention_rotated_outlier_mse"
+        or args.key_quantizer == "attention_adaptive_rotated_outlier_mse"
+        or args.value_quantizer == "attention_adaptive_rotated_outlier_mse"
+        or args.long_prompt_key_quantizer == "attention_adaptive_rotated_outlier_mse"
+        or args.long_prompt_value_quantizer == "attention_adaptive_rotated_outlier_mse"
+        or args.key_quantizer == "attention_adaptive_paired_rotated_outlier_mse"
+        or args.value_quantizer == "attention_adaptive_paired_rotated_outlier_mse"
+        or args.long_prompt_key_quantizer == "attention_adaptive_paired_rotated_outlier_mse"
+        or args.long_prompt_value_quantizer == "attention_adaptive_paired_rotated_outlier_mse"
+        or args.key_quantizer == "entropy_guarded_paired_rotated_outlier_mse"
+        or args.value_quantizer == "entropy_guarded_paired_rotated_outlier_mse"
+        or args.long_prompt_key_quantizer == "entropy_guarded_paired_rotated_outlier_mse"
+        or args.long_prompt_value_quantizer == "entropy_guarded_paired_rotated_outlier_mse"
+        or args.key_quantizer == "attention_scale_mse"
+        or args.value_quantizer == "attention_scale_mse"
+        or args.long_prompt_key_quantizer == "attention_scale_mse"
+        or args.long_prompt_value_quantizer == "attention_scale_mse"
+        or args.key_quantizer == "regular_attention_scale_mse"
+        or args.value_quantizer == "regular_attention_scale_mse"
+        or args.long_prompt_key_quantizer == "regular_attention_scale_mse"
+        or args.long_prompt_value_quantizer == "regular_attention_scale_mse"
+        or args.key_quantizer == "attention_adaptive_regular_gain_mse"
+        or args.value_quantizer == "attention_adaptive_regular_gain_mse"
+        or args.long_prompt_key_quantizer == "attention_adaptive_regular_gain_mse"
+        or args.long_prompt_value_quantizer == "attention_adaptive_regular_gain_mse"
     ):
         install_attention_error_cache_patch()
     layer_key_bits = parse_layer_bits(args.layer_key_bits)
     layer_value_bits = parse_layer_bits(args.layer_value_bits)
     layer_key_quantizers = parse_layer_quantizers(args.layer_key_quantizers)
     layer_value_quantizers = parse_layer_quantizers(args.layer_value_quantizers)
+    layer_key_rotation_indices = parse_layer_ints(args.layer_key_rotation_indices)
+    layer_value_rotation_indices = parse_layer_ints(args.layer_value_rotation_indices)
     layer_key_channel_scores = load_layer_channel_scores(args.layer_key_channel_scores, "layer_key_channel_scores")
     layer_value_channel_scores = load_layer_channel_scores(args.layer_value_channel_scores, "layer_value_channel_scores")
+    layer_key_rotation_matrices = load_layer_rotation_matrices(
+        args.layer_key_rotation_matrices,
+        "layer_key_rotation_matrices",
+    )
+    layer_value_rotation_matrices = load_layer_rotation_matrices(
+        args.layer_value_rotation_matrices,
+        "layer_value_rotation_matrices",
+    )
     resolved_key_quantizer, resolved_value_quantizer = resolve_quantizer_preset(
         args.baseline_mode,
         args.key_quantizer,
@@ -480,7 +613,7 @@ def main() -> None:
             if args.cache_mode == "turboquant":
                 kv_cfg = make_kv_config_from_effective_bits(
                     args.kv_bits,
-                    seed=idx,
+                    seed=args.fixed_kv_seed if args.fixed_kv_seed is not None else idx,
                     codebook_grid_size=args.codebook_grid_size,
                     key_quantizer=example_key_quantizer,
                     value_quantizer=example_value_quantizer,
@@ -493,8 +626,12 @@ def main() -> None:
                     layer_value_quantizers=layer_value_quantizers,
                     layer_key_bits=layer_key_bits,
                     layer_value_bits=layer_value_bits,
+                    layer_key_rotation_indices=layer_key_rotation_indices,
+                    layer_value_rotation_indices=layer_value_rotation_indices,
                     layer_key_channel_scores=layer_key_channel_scores,
                     layer_value_channel_scores=layer_value_channel_scores,
+                    layer_key_rotation_matrices=layer_key_rotation_matrices,
+                    layer_value_rotation_matrices=layer_value_rotation_matrices,
                     sensitivity_score_power=args.sensitivity_score_power,
                     token_protection_policy=args.token_protection_policy,
                     protected_start_tokens=args.protected_start_tokens,
@@ -502,6 +639,9 @@ def main() -> None:
                     token_protection_target_ratio=args.token_protection_target_ratio,
                     token_protection_targets=args.token_protection_targets,
                     attention_error_query_tokens=args.attention_error_query_tokens,
+                    attention_entropy_threshold=args.attention_entropy_threshold,
+                    rotation_bank_size=args.rotation_bank_size,
+                    outlier_hadamard_block_size=args.outlier_hadamard_block_size,
                 )
                 kv_cfg = type(kv_cfg)(
                     key_bits=args.key_bits if args.key_bits is not None else kv_cfg.key_bits,
@@ -521,8 +661,12 @@ def main() -> None:
                     layer_value_quantizers=kv_cfg.layer_value_quantizers,
                     layer_key_bits=kv_cfg.layer_key_bits,
                     layer_value_bits=kv_cfg.layer_value_bits,
+                    layer_key_rotation_indices=kv_cfg.layer_key_rotation_indices,
+                    layer_value_rotation_indices=kv_cfg.layer_value_rotation_indices,
                     layer_key_channel_scores=kv_cfg.layer_key_channel_scores,
                     layer_value_channel_scores=kv_cfg.layer_value_channel_scores,
+                    layer_key_rotation_matrices=kv_cfg.layer_key_rotation_matrices,
+                    layer_value_rotation_matrices=kv_cfg.layer_value_rotation_matrices,
                     sensitivity_score_power=kv_cfg.sensitivity_score_power,
                     token_protection_policy=kv_cfg.token_protection_policy,
                     protected_start_tokens=kv_cfg.protected_start_tokens,
@@ -530,6 +674,9 @@ def main() -> None:
                     token_protection_target_ratio=kv_cfg.token_protection_target_ratio,
                     token_protection_targets=kv_cfg.token_protection_targets,
                     attention_error_query_tokens=kv_cfg.attention_error_query_tokens,
+                    attention_entropy_threshold=kv_cfg.attention_entropy_threshold,
+                    rotation_bank_size=kv_cfg.rotation_bank_size,
+                    outlier_hadamard_block_size=kv_cfg.outlier_hadamard_block_size,
                 )
                 past_key_values = TurboQuantDynamicCache(kv_cfg)
             example_started = perf_counter()
@@ -586,6 +733,7 @@ def main() -> None:
                 "max_input_tokens": args.max_input_tokens,
                 "cache_mode": args.cache_mode,
                 "kv_bits": args.kv_bits,
+                "fixed_kv_seed": args.fixed_kv_seed,
                 "key_bits": args.key_bits,
                 "value_bits": args.value_bits,
                 "baseline_mode": args.baseline_mode,
@@ -595,6 +743,10 @@ def main() -> None:
                 "layer_value_bits": list(layer_value_bits) if layer_value_bits is not None else None,
                 "layer_key_quantizers": list(layer_key_quantizers) if layer_key_quantizers is not None else None,
                 "layer_value_quantizers": list(layer_value_quantizers) if layer_value_quantizers is not None else None,
+                "layer_key_rotation_indices": list(layer_key_rotation_indices) if layer_key_rotation_indices is not None else None,
+                "layer_value_rotation_indices": (
+                    list(layer_value_rotation_indices) if layer_value_rotation_indices is not None else None
+                ),
                 "long_prompt_threshold": args.long_prompt_threshold,
                 "long_prompt_max_tokens": args.long_prompt_max_tokens,
                 "long_prompt_exclude_code": args.long_prompt_exclude_code,
@@ -615,6 +767,8 @@ def main() -> None:
                 "value_outlier_policy": args.value_outlier_policy,
                 "layer_key_channel_scores": args.layer_key_channel_scores,
                 "layer_value_channel_scores": args.layer_value_channel_scores,
+                "layer_key_rotation_matrices": args.layer_key_rotation_matrices,
+                "layer_value_rotation_matrices": args.layer_value_rotation_matrices,
                 "sensitivity_score_power": args.sensitivity_score_power,
                 "token_protection_policy": args.token_protection_policy,
                 "protected_start_tokens": args.protected_start_tokens,
@@ -622,6 +776,9 @@ def main() -> None:
                 "token_protection_target_ratio": args.token_protection_target_ratio,
                 "token_protection_targets": args.token_protection_targets,
                 "attention_error_query_tokens": args.attention_error_query_tokens,
+                "attention_entropy_threshold": args.attention_entropy_threshold,
+                "rotation_bank_size": args.rotation_bank_size,
+                "outlier_hadamard_block_size": args.outlier_hadamard_block_size,
                 "quantize_decode": not args.no_quantize_decode,
                 "prompt_tokens": prompt_tokens,
                 "generated_tokens": int(new_tokens.shape[-1]),
@@ -663,6 +820,7 @@ def main() -> None:
         "split": data_cfg["split"],
         "cache_mode": args.cache_mode,
         "kv_bits": args.kv_bits,
+        "fixed_kv_seed": args.fixed_kv_seed,
         "key_bits": args.key_bits,
         "value_bits": args.value_bits,
         "baseline_mode": args.baseline_mode,
@@ -672,6 +830,8 @@ def main() -> None:
         "layer_value_bits": list(layer_value_bits) if layer_value_bits is not None else None,
         "layer_key_quantizers": list(layer_key_quantizers) if layer_key_quantizers is not None else None,
         "layer_value_quantizers": list(layer_value_quantizers) if layer_value_quantizers is not None else None,
+        "layer_key_rotation_indices": list(layer_key_rotation_indices) if layer_key_rotation_indices is not None else None,
+        "layer_value_rotation_indices": list(layer_value_rotation_indices) if layer_value_rotation_indices is not None else None,
         "long_prompt_threshold": args.long_prompt_threshold,
         "long_prompt_max_tokens": args.long_prompt_max_tokens,
         "long_prompt_key_quantizer": args.long_prompt_key_quantizer,
@@ -682,6 +842,8 @@ def main() -> None:
         "value_outlier_policy": args.value_outlier_policy,
         "layer_key_channel_scores": args.layer_key_channel_scores,
         "layer_value_channel_scores": args.layer_value_channel_scores,
+        "layer_key_rotation_matrices": args.layer_key_rotation_matrices,
+        "layer_value_rotation_matrices": args.layer_value_rotation_matrices,
         "sensitivity_score_power": args.sensitivity_score_power,
         "token_protection_policy": args.token_protection_policy,
         "protected_start_tokens": args.protected_start_tokens,
@@ -689,6 +851,9 @@ def main() -> None:
         "token_protection_target_ratio": args.token_protection_target_ratio,
         "token_protection_targets": args.token_protection_targets,
         "attention_error_query_tokens": args.attention_error_query_tokens,
+        "attention_entropy_threshold": args.attention_entropy_threshold,
+        "rotation_bank_size": args.rotation_bank_size,
+        "outlier_hadamard_block_size": args.outlier_hadamard_block_size,
         "quantize_decode": not args.no_quantize_decode,
         "device_map": args.device_map,
         "max_memory": args.max_memory,

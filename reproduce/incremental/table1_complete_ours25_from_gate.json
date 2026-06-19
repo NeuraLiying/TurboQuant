@@ -1,0 +1,191 @@
+{
+  "rows": [
+    {
+      "dataset": "narrativeqa",
+      "category": "SingleQA",
+      "tq25": 25.345883606928165,
+      "ours25": 27.34437690935368,
+      "delta25": 1.9984933024255156,
+      "active25": 1.0,
+      "n": 200
+    },
+    {
+      "dataset": "qasper",
+      "category": "SingleQA",
+      "tq25": 42.43731663259063,
+      "ours25": 44.44250367538649,
+      "delta25": 2.0051870427958605,
+      "active25": 0.21,
+      "n": 200
+    },
+    {
+      "dataset": "multifieldqa_en",
+      "category": "SingleQA",
+      "tq25": 48.03304800712288,
+      "ours25": 49.179294655231764,
+      "delta25": 1.1462466481088853,
+      "active25": 0.5933333333333334,
+      "n": 150
+    },
+    {
+      "dataset": "hotpotqa",
+      "category": "MultiQA",
+      "tq25": 44.825020885547204,
+      "ours25": 48.41095162147794,
+      "delta25": 3.585930735930738,
+      "active25": 0.915,
+      "n": 200
+    },
+    {
+      "dataset": "2wikimqa",
+      "category": "MultiQA",
+      "tq25": 37.95967643467643,
+      "ours25": 39.90891885891885,
+      "delta25": 1.9492424242424207,
+      "active25": 0.55,
+      "n": 200
+    },
+    {
+      "dataset": "musique",
+      "category": "MultiQA",
+      "tq25": 25.23722753854333,
+      "ours25": 24.224802597892584,
+      "delta25": -1.012424940650746,
+      "active25": 1.0,
+      "n": 200
+    },
+    {
+      "dataset": "gov_report",
+      "category": "Summarization",
+      "tq25": 32.01582678091669,
+      "ours25": 32.41334987406581,
+      "delta25": 0.39752309314911827,
+      "active25": 0.76,
+      "n": 200
+    },
+    {
+      "dataset": "qmsum",
+      "category": "Summarization",
+      "tq25": 24.38480769580231,
+      "ours25": 24.184841490903707,
+      "delta25": -0.19996620489860106,
+      "active25": 0.91,
+      "n": 200
+    },
+    {
+      "dataset": "multi_news",
+      "category": "Summarization",
+      "tq25": 26.216275589734796,
+      "ours25": 26.274970284850962,
+      "delta25": 0.05869469511616643,
+      "active25": 0.055,
+      "n": 200
+    },
+    {
+      "dataset": "trec",
+      "category": "Few shot",
+      "tq25": 70.5,
+      "ours25": 71.5,
+      "delta25": 1.0,
+      "active25": 0.56,
+      "n": 200
+    },
+    {
+      "dataset": "triviaqa",
+      "category": "Few shot",
+      "tq25": 89.39285714285714,
+      "ours25": 89.48376623376622,
+      "delta25": 0.09090909090907928,
+      "active25": 0.8,
+      "n": 200
+    },
+    {
+      "dataset": "samsum",
+      "category": "Few shot",
+      "tq25": 41.47051876986506,
+      "ours25": 42.32263455450453,
+      "delta25": 0.8521157846394729,
+      "active25": 0.665,
+      "n": 200
+    },
+    {
+      "dataset": "passage_retrieval_en",
+      "category": "Synthetic",
+      "tq25": 93.0,
+      "ours25": 96.0,
+      "delta25": 3.0,
+      "active25": 1.0,
+      "n": 200
+    },
+    {
+      "dataset": "passage_count",
+      "category": "Synthetic",
+      "tq25": 3.4460227272727275,
+      "ours25": 4.587121212121213,
+      "delta25": 1.1410984848484853,
+      "active25": 0.985,
+      "n": 200
+    },
+    {
+      "dataset": "lcc",
+      "category": "Code",
+      "tq25": 57.038,
+      "ours25": 57.038,
+      "delta25": 0.0,
+      "active25": 0.0,
+      "n": 500
+    },
+    {
+      "dataset": "repobench-p",
+      "category": "Code",
+      "tq25": 53.004,
+      "ours25": 53.004,
+      "delta25": 0.0,
+      "active25": 0.0,
+      "n": 500
+    }
+  ],
+  "categories": [
+    {
+      "category": "SingleQA",
+      "tq25": 38.605416082213885,
+      "ours25": 40.32205841332398,
+      "delta25": 1.7166423311100871
+    },
+    {
+      "category": "MultiQA",
+      "tq25": 36.00730828625566,
+      "ours25": 37.51489102609646,
+      "delta25": 1.5075827398408042
+    },
+    {
+      "category": "Summarization",
+      "tq25": 27.538970022151265,
+      "ours25": 27.624387216606824,
+      "delta25": 0.08541719445556122
+    },
+    {
+      "category": "Few shot",
+      "tq25": 67.12112530424073,
+      "ours25": 67.76880026275693,
+      "delta25": 0.6476749585161841
+    },
+    {
+      "category": "Synthetic",
+      "tq25": 48.22301136363637,
+      "ours25": 50.29356060606061,
+      "delta25": 2.0705492424242427
+    },
+    {
+      "category": "Code",
+      "tq25": 55.021,
+      "ours25": 55.021,
+      "delta25": 0.0
+    }
+  ],
+  "average": {
+    "tq25": 45.41947184308299,
+    "ours25": 46.424116254140806,
+    "delta25": 1.0046444110578132
+  }
+}

@@ -1,0 +1,47 @@
+KV bits,Level,Name,TurboQuant,Rate-Regime MSE,Delta,Cache ratio,Complete
+2.5,category,SingleQA,38.61,38.52,-0.09,0.17,True
+2.5,category,MultiQA,36.01,36.55,0.54,0.17,True
+2.5,category,Summarization,,,,,False
+2.5,category,Few shot,,,,,False
+2.5,category,Synthetic,,,,,False
+2.5,category,Code,,,,,False
+2.5,average,Average,,,,,False
+2.5,task,narrativeqa,25.35,24.23,-1.12,0.17,True
+2.5,task,qasper,42.44,44.30,1.86,0.17,True
+2.5,task,multifieldqa_en,48.03,47.03,-1.00,0.17,True
+2.5,task,hotpotqa,44.83,46.49,1.67,0.17,True
+2.5,task,2wikimqa,37.96,38.49,0.53,0.17,True
+2.5,task,musique,25.24,24.68,-0.56,0.17,True
+2.5,task,gov_report,,,,,False
+2.5,task,qmsum,24.38,24.34,-0.04,0.17,True
+2.5,task,multi_news,,,,,False
+2.5,task,trec,70.50,72.00,1.50,0.17,True
+2.5,task,triviaqa,89.39,89.49,0.09,0.17,True
+2.5,task,samsum,,,,,False
+2.5,task,passage_retrieval_en,,,,,False
+2.5,task,passage_count,3.45,2.64,-0.81,0.17,True
+2.5,task,lcc,,,,,False
+2.5,task,repobench-p,,,,,False
+3.5,category,SingleQA,42.73,43.41,0.68,0.23,True
+3.5,category,MultiQA,43.04,43.16,0.12,0.23,True
+3.5,category,Summarization,28.72,28.67,-0.05,0.24,True
+3.5,category,Few shot,68.59,68.92,0.34,0.24,True
+3.5,category,Synthetic,52.06,52.97,0.91,0.23,True
+3.5,category,Code,61.16,62.05,0.89,0.24,True
+3.5,average,Average,49.38,49.86,0.48,0.24,True
+3.5,task,narrativeqa,29.25,28.22,-1.03,0.23,True
+3.5,task,qasper,46.32,46.04,-0.29,0.23,True
+3.5,task,multifieldqa_en,52.61,55.96,3.35,0.23,True
+3.5,task,hotpotqa,54.65,55.10,0.46,0.23,True
+3.5,task,2wikimqa,44.47,45.24,0.77,0.23,True
+3.5,task,musique,30.01,29.13,-0.88,0.23,True
+3.5,task,gov_report,34.08,34.46,0.39,0.24,True
+3.5,task,qmsum,25.33,24.83,-0.50,0.24,True
+3.5,task,multi_news,26.77,26.73,-0.04,0.26,True
+3.5,task,trec,72.00,71.50,-0.50,0.24,True
+3.5,task,triviaqa,91.34,91.09,-0.25,0.23,True
+3.5,task,samsum,42.43,44.18,1.75,0.24,True
+3.5,task,passage_retrieval_en,100.00,99.50,-0.50,0.23,True
+3.5,task,passage_count,4.12,6.44,2.31,0.23,True
+3.5,task,lcc,64.04,65.25,1.21,0.24,True
+3.5,task,repobench-p,58.29,58.85,0.57,0.24,True

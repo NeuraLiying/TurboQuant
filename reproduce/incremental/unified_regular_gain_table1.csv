@@ -1,0 +1,47 @@
+KV bits,Level,Name,Baseline,Candidate,Delta,Cache ratio,Complete
+2.5,category,SingleQA,38.61,39.76,1.16,0.17,True
+2.5,category,MultiQA,36.01,36.50,0.50,0.17,True
+2.5,category,Summarization,27.54,27.71,0.17,0.18,True
+2.5,category,Few shot,67.12,67.48,0.36,0.17,True
+2.5,category,Synthetic,48.22,50.28,2.05,0.17,True
+2.5,category,Code,55.02,53.53,-1.49,0.17,True
+2.5,average,Average,45.42,45.88,0.46,0.17,True
+2.5,task,narrativeqa,25.35,27.34,2.00,0.17,True
+2.5,task,qasper,42.44,43.00,0.57,0.17,True
+2.5,task,multifieldqa_en,48.03,48.95,0.91,0.17,True
+2.5,task,hotpotqa,44.83,48.08,3.25,0.17,True
+2.5,task,2wikimqa,37.96,37.21,-0.75,0.17,True
+2.5,task,musique,25.24,24.22,-1.01,0.17,True
+2.5,task,gov_report,32.02,32.46,0.44,0.18,True
+2.5,task,qmsum,24.38,24.13,-0.26,0.17,True
+2.5,task,multi_news,26.22,26.53,0.32,0.19,True
+2.5,task,trec,70.50,70.00,-0.50,0.17,True
+2.5,task,triviaqa,89.39,90.06,0.66,0.17,True
+2.5,task,samsum,41.47,42.38,0.91,0.17,True
+2.5,task,passage_retrieval_en,93.00,96.00,3.00,0.17,True
+2.5,task,passage_count,3.45,4.56,1.11,0.17,True
+2.5,task,lcc,57.04,57.64,0.60,0.18,True
+2.5,task,repobench-p,53.00,49.42,-3.58,0.17,True
+3.5,category,SingleQA,42.73,43.77,1.04,0.23,True
+3.5,category,MultiQA,43.04,43.17,0.13,0.23,True
+3.5,category,Summarization,,,,,False
+3.5,category,Few shot,,,,,False
+3.5,category,Synthetic,,,,,False
+3.5,category,Code,,,,,False
+3.5,average,Average,,,,,False
+3.5,task,narrativeqa,29.25,29.26,0.01,0.23,True
+3.5,task,qasper,46.32,47.60,1.27,0.23,True
+3.5,task,multifieldqa_en,52.61,54.45,1.83,0.23,True
+3.5,task,hotpotqa,54.65,54.60,-0.05,0.23,True
+3.5,task,2wikimqa,44.47,45.11,0.65,0.23,True
+3.5,task,musique,30.01,29.79,-0.22,0.23,True
+3.5,task,gov_report,,,,,False
+3.5,task,qmsum,25.33,25.01,-0.31,0.24,True
+3.5,task,multi_news,,,,,False
+3.5,task,trec,72.00,70.50,-1.50,0.24,True
+3.5,task,triviaqa,91.34,91.00,-0.33,0.23,True
+3.5,task,samsum,,,,,False
+3.5,task,passage_retrieval_en,,,,,False
+3.5,task,passage_count,4.12,3.06,-1.06,0.23,True
+3.5,task,lcc,,,,,False
+3.5,task,repobench-p,,,,,False

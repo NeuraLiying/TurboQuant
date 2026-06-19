@@ -1,0 +1,223 @@
+{
+  "method": "Content-Adaptive LowBit-Gain",
+  "threshold": 6144,
+  "rule": "Use lowbit_gain_mse when prompt_tokens > threshold and prompt is not code-completion-like; otherwise use TurboQuant MSE.",
+  "average": {
+    "tq25": 45.41947184308299,
+    "lowbit25": 45.87643751202455,
+    "content_adaptive25": 46.424116254140806,
+    "delta_vs_tq25": 1.0046444110578132
+  },
+  "category_rows": [
+    {
+      "category": "SingleQA",
+      "tq25": 38.605416082213885,
+      "lowbit25": 39.76460672305965,
+      "content_adaptive25": 40.32205841332398,
+      "delta_vs_tq25": 1.7166423311100871,
+      "activation_rate": 0.601111111111111
+    },
+    {
+      "category": "MultiQA",
+      "tq25": 36.00730828625566,
+      "lowbit25": 36.50280326292511,
+      "content_adaptive25": 37.51489102609646,
+      "delta_vs_tq25": 1.5075827398408042,
+      "activation_rate": 0.8216666666666667
+    },
+    {
+      "category": "Summarization",
+      "tq25": 27.538970022151265,
+      "lowbit25": 27.705030346978898,
+      "content_adaptive25": 27.624387216606824,
+      "delta_vs_tq25": 0.08541719445556122,
+      "activation_rate": 0.575
+    },
+    {
+      "category": "Few shot",
+      "tq25": 67.12112530424073,
+      "lowbit25": 67.47824913312306,
+      "content_adaptive25": 67.76880026275693,
+      "delta_vs_tq25": 0.6476749585161841,
+      "activation_rate": 0.6750000000000002
+    },
+    {
+      "category": "Synthetic",
+      "tq25": 48.22301136363637,
+      "lowbit25": 50.27793560606061,
+      "content_adaptive25": 50.29356060606061,
+      "delta_vs_tq25": 2.0705492424242427,
+      "activation_rate": 0.9924999999999999
+    },
+    {
+      "category": "Code",
+      "tq25": 55.021,
+      "lowbit25": 53.53,
+      "content_adaptive25": 55.021,
+      "delta_vs_tq25": 0.0,
+      "activation_rate": 0.0
+    }
+  ],
+  "task_rows": [
+    {
+      "category": "SingleQA",
+      "dataset": "narrativeqa",
+      "n": 200,
+      "tq25": 25.345883606928165,
+      "lowbit25": 27.34437690935368,
+      "content_adaptive25": 27.34437690935368,
+      "delta_vs_tq25": 1.9984933024255156,
+      "activation_rate": 1.0
+    },
+    {
+      "category": "SingleQA",
+      "dataset": "qasper",
+      "n": 200,
+      "tq25": 42.43731663259063,
+      "lowbit25": 43.0033403171962,
+      "content_adaptive25": 44.44250367538649,
+      "delta_vs_tq25": 2.0051870427958605,
+      "activation_rate": 0.21
+    },
+    {
+      "category": "SingleQA",
+      "dataset": "multifieldqa_en",
+      "n": 150,
+      "tq25": 48.03304800712288,
+      "lowbit25": 48.94610294262907,
+      "content_adaptive25": 49.179294655231764,
+      "delta_vs_tq25": 1.1462466481088853,
+      "activation_rate": 0.5933333333333334
+    },
+    {
+      "category": "MultiQA",
+      "dataset": "hotpotqa",
+      "n": 200,
+      "tq25": 44.825020885547204,
+      "lowbit25": 48.07761828814461,
+      "content_adaptive25": 48.41095162147794,
+      "delta_vs_tq25": 3.585930735930738,
+      "activation_rate": 0.915
+    },
+    {
+      "category": "MultiQA",
+      "dataset": "2wikimqa",
+      "n": 200,
+      "tq25": 37.95967643467643,
+      "lowbit25": 37.20598890273813,
+      "content_adaptive25": 39.90891885891885,
+      "delta_vs_tq25": 1.9492424242424207,
+      "activation_rate": 0.55
+    },
+    {
+      "category": "MultiQA",
+      "dataset": "musique",
+      "n": 200,
+      "tq25": 25.23722753854333,
+      "lowbit25": 24.224802597892584,
+      "content_adaptive25": 24.224802597892584,
+      "delta_vs_tq25": -1.012424940650746,
+      "activation_rate": 1.0
+    },
+    {
+      "category": "Summarization",
+      "dataset": "gov_report",
+      "n": 200,
+      "tq25": 32.01582678091669,
+      "lowbit25": 32.45547189117381,
+      "content_adaptive25": 32.41334987406581,
+      "delta_vs_tq25": 0.39752309314911827,
+      "activation_rate": 0.76
+    },
+    {
+      "category": "Summarization",
+      "dataset": "qmsum",
+      "n": 200,
+      "tq25": 24.38480769580231,
+      "lowbit25": 24.127111572074817,
+      "content_adaptive25": 24.184841490903707,
+      "delta_vs_tq25": -0.19996620489860106,
+      "activation_rate": 0.91
+    },
+    {
+      "category": "Summarization",
+      "dataset": "multi_news",
+      "n": 200,
+      "tq25": 26.216275589734796,
+      "lowbit25": 26.532507577688065,
+      "content_adaptive25": 26.274970284850962,
+      "delta_vs_tq25": 0.05869469511616643,
+      "activation_rate": 0.055
+    },
+    {
+      "category": "Few shot",
+      "dataset": "trec",
+      "n": 200,
+      "tq25": 70.5,
+      "lowbit25": 70.0,
+      "content_adaptive25": 71.5,
+      "delta_vs_tq25": 1.0,
+      "activation_rate": 0.56
+    },
+    {
+      "category": "Few shot",
+      "dataset": "triviaqa",
+      "n": 200,
+      "tq25": 89.39285714285714,
+      "lowbit25": 90.05757575757576,
+      "content_adaptive25": 89.48376623376622,
+      "delta_vs_tq25": 0.09090909090907928,
+      "activation_rate": 0.8
+    },
+    {
+      "category": "Few shot",
+      "dataset": "samsum",
+      "n": 200,
+      "tq25": 41.47051876986506,
+      "lowbit25": 42.37717164179342,
+      "content_adaptive25": 42.32263455450453,
+      "delta_vs_tq25": 0.8521157846394729,
+      "activation_rate": 0.665
+    },
+    {
+      "category": "Synthetic",
+      "dataset": "passage_retrieval_en",
+      "n": 200,
+      "tq25": 93.0,
+      "lowbit25": 96.0,
+      "content_adaptive25": 96.0,
+      "delta_vs_tq25": 3.0,
+      "activation_rate": 1.0
+    },
+    {
+      "category": "Synthetic",
+      "dataset": "passage_count",
+      "n": 200,
+      "tq25": 3.4460227272727275,
+      "lowbit25": 4.555871212121213,
+      "content_adaptive25": 4.587121212121213,
+      "delta_vs_tq25": 1.1410984848484853,
+      "activation_rate": 0.985
+    },
+    {
+      "category": "Code",
+      "dataset": "lcc",
+      "n": 500,
+      "tq25": 57.038,
+      "lowbit25": 57.636,
+      "content_adaptive25": 57.038,
+      "delta_vs_tq25": 0.0,
+      "activation_rate": 0.0
+    },
+    {
+      "category": "Code",
+      "dataset": "repobench-p",
+      "n": 500,
+      "tq25": 53.004,
+      "lowbit25": 49.424,
+      "content_adaptive25": 53.004,
+      "delta_vs_tq25": 0.0,
+      "activation_rate": 0.0
+    }
+  ]
+}

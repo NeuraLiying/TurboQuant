@@ -1,0 +1,47 @@
+KV bits,Level,Name,TurboQuant,Attention-Adaptive Value Hadamard,Delta,Cache ratio,Complete
+2.5,category,SingleQA,,,,,False
+2.5,category,MultiQA,36.01,34.08,-1.93,0.17,True
+2.5,category,Summarization,,,,,False
+2.5,category,Few shot,,,,,False
+2.5,category,Synthetic,,,,,False
+2.5,category,Code,,,,,False
+2.5,average,Average,,,,,False
+2.5,task,narrativeqa,,,,,False
+2.5,task,qasper,,,,,False
+2.5,task,multifieldqa_en,,,,,False
+2.5,task,hotpotqa,44.83,47.02,2.20,0.17,True
+2.5,task,2wikimqa,37.96,34.87,-3.09,0.17,True
+2.5,task,musique,25.24,20.35,-4.88,0.17,True
+2.5,task,gov_report,,,,,False
+2.5,task,qmsum,,,,,False
+2.5,task,multi_news,,,,,False
+2.5,task,trec,,,,,False
+2.5,task,triviaqa,,,,,False
+2.5,task,samsum,,,,,False
+2.5,task,passage_retrieval_en,,,,,False
+2.5,task,passage_count,,,,,False
+2.5,task,lcc,,,,,False
+2.5,task,repobench-p,,,,,False
+3.5,category,SingleQA,,,,,False
+3.5,category,MultiQA,43.04,42.20,-0.85,0.23,True
+3.5,category,Summarization,,,,,False
+3.5,category,Few shot,,,,,False
+3.5,category,Synthetic,,,,,False
+3.5,category,Code,,,,,False
+3.5,average,Average,,,,,False
+3.5,task,narrativeqa,,,,,False
+3.5,task,qasper,,,,,False
+3.5,task,multifieldqa_en,,,,,False
+3.5,task,hotpotqa,54.65,54.53,-0.12,0.23,True
+3.5,task,2wikimqa,44.47,44.95,0.48,0.23,True
+3.5,task,musique,30.01,27.11,-2.90,0.23,True
+3.5,task,gov_report,,,,,False
+3.5,task,qmsum,,,,,False
+3.5,task,multi_news,,,,,False
+3.5,task,trec,,,,,False
+3.5,task,triviaqa,,,,,False
+3.5,task,samsum,,,,,False
+3.5,task,passage_retrieval_en,,,,,False
+3.5,task,passage_count,,,,,False
+3.5,task,lcc,,,,,False
+3.5,task,repobench-p,,,,,False

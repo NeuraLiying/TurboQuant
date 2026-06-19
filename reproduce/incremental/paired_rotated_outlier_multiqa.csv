@@ -1,0 +1,47 @@
+KV bits,Level,Name,TurboQuant,Paired Rotated Outlier,Delta,Cache ratio,Complete
+2.5,category,SingleQA,,,,,False
+2.5,category,MultiQA,36.01,34.55,-1.46,0.17,True
+2.5,category,Summarization,,,,,False
+2.5,category,Few shot,,,,,False
+2.5,category,Synthetic,,,,,False
+2.5,category,Code,,,,,False
+2.5,average,Average,,,,,False
+2.5,task,narrativeqa,,,,,False
+2.5,task,qasper,,,,,False
+2.5,task,multifieldqa_en,,,,,False
+2.5,task,hotpotqa,44.83,47.99,3.17,0.17,True
+2.5,task,2wikimqa,37.96,33.31,-4.65,0.17,True
+2.5,task,musique,25.24,22.35,-2.89,0.17,True
+2.5,task,gov_report,,,,,False
+2.5,task,qmsum,,,,,False
+2.5,task,multi_news,,,,,False
+2.5,task,trec,,,,,False
+2.5,task,triviaqa,,,,,False
+2.5,task,samsum,,,,,False
+2.5,task,passage_retrieval_en,,,,,False
+2.5,task,passage_count,,,,,False
+2.5,task,lcc,,,,,False
+2.5,task,repobench-p,,,,,False
+3.5,category,SingleQA,,,,,False
+3.5,category,MultiQA,43.04,41.37,-1.67,0.23,True
+3.5,category,Summarization,,,,,False
+3.5,category,Few shot,,,,,False
+3.5,category,Synthetic,,,,,False
+3.5,category,Code,,,,,False
+3.5,average,Average,,,,,False
+3.5,task,narrativeqa,,,,,False
+3.5,task,qasper,,,,,False
+3.5,task,multifieldqa_en,,,,,False
+3.5,task,hotpotqa,54.65,53.22,-1.42,0.23,True
+3.5,task,2wikimqa,44.47,42.38,-2.09,0.23,True
+3.5,task,musique,30.01,28.52,-1.49,0.23,True
+3.5,task,gov_report,,,,,False
+3.5,task,qmsum,,,,,False
+3.5,task,multi_news,,,,,False
+3.5,task,trec,,,,,False
+3.5,task,triviaqa,,,,,False
+3.5,task,samsum,,,,,False
+3.5,task,passage_retrieval_en,,,,,False
+3.5,task,passage_count,,,,,False
+3.5,task,lcc,,,,,False
+3.5,task,repobench-p,,,,,False

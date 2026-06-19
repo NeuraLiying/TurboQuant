@@ -5,12 +5,19 @@ from turboquant.core import TurboQuantLearnedBlockMSE, hadamard_orthogonal
 from turboquant.kv_cache import (
     CenteredSegment,
     HeadAdaptiveOutlierMSESegment,
+    HadamardResidualSegment,
+    HeadHadamardSegment,
+    HeadRotationMSESegment,
+    OutlierHadamardSegment,
     OutlierMSESegment,
     PackedMSESegment,
     PackedProdSegment,
+    RotatedOutlierMSESegment,
+    RmsScaledSegment,
     UniformAffineSegment,
     TokenProtectedSegment,
     make_kv_config_from_effective_bits,
+    VectorAdaptiveRotationSegment,
     pack_indices,
     unpack_indices,
 )
@@ -352,6 +359,283 @@ def test_turboquant_dynamic_cache_fractional_bits_use_outlier_segments():
     assert summary["outlier_bits"] == [3]
 
 
+def test_srht_mse_uses_structured_hadamard_rotation():
+    torch.manual_seed(23)
+    cfg = make_kv_config_from_effective_bits(
+        3,
+        codebook_grid_size=10_001,
+        key_quantizer="srht_mse",
+        value_quantizer="srht_mse",
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 5, 16)
+    value = torch.randn(1, 2, 5, 16)
+
+    out_key, out_value = cache.update(key, value, layer_idx=0)
+    quantizer = cache._get_quantizer(
+        quantizer_kind="srht_mse",
+        name="key",
+        dimension=16,
+        bits=3,
+        layer_idx=0,
+        device=key.device,
+        dtype=key.dtype,
+    )
+    transform = quantizer.transform.to(dtype=torch.float32)
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    assert isinstance(cache.key_cache[0][0], PackedMSESegment)
+    assert torch.allclose(transform @ transform.T, torch.eye(16), atol=1e-5)
+    assert torch.allclose(transform.abs(), torch.full((16, 16), 16**-0.5), atol=1e-6)
+    assert cache.compression_summary()["avg_effective_index_bits"] == 3.0
+
+
+def test_rotated_outlier_mse_uses_rotated_coordinate_allocation():
+    torch.manual_seed(24)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="rotated_outlier_mse",
+        value_quantizer="rotated_outlier_mse",
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 6, 16)
+    value = torch.randn(1, 2, 6, 16)
+
+    out_key, out_value = cache.update(key, value, layer_idx=0)
+    key_segment = cache.key_cache[0][0]
+    value_segment = cache.value_cache[0][0]
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    assert isinstance(key_segment, RotatedOutlierMSESegment)
+    assert isinstance(value_segment, RotatedOutlierMSESegment)
+    assert key_segment.regular_bits == 2
+    assert key_segment.outlier_bits == 3
+    assert key_segment.outlier_indices.numel() == 8
+    assert key_segment.regular_indices.numel() == 8
+    assert key_segment.effective_index_bits == 2.5
+    summary = cache.compression_summary()
+    assert summary["segment_types"] == {"RotatedOutlierMSESegment": 2}
+    assert summary["avg_effective_index_bits"] == 2.5
+    assert summary["outlier_counts"] == [8]
+    assert summary["regular_bits"] == [2]
+    assert summary["outlier_bits"] == [3]
+    assert cache.storage_nbytes() < cache.materialized_nbytes()
+
+
+def test_shared_rotated_outlier_mse_uses_shared_kv_coordinate_allocation():
+    torch.manual_seed(240)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="shared_rotated_outlier_mse",
+        value_quantizer="shared_rotated_outlier_mse",
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 6, 16)
+    value = torch.randn(1, 2, 6, 16)
+
+    out_key, out_value = cache.update(key, value, layer_idx=0)
+    key_segment = cache.key_cache[0][0]
+    value_segment = cache.value_cache[0][0]
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    assert isinstance(key_segment, RotatedOutlierMSESegment)
+    assert isinstance(value_segment, RotatedOutlierMSESegment)
+    assert key_segment.quantizer_kind == "shared_rotated_outlier_mse"
+    assert value_segment.quantizer_kind == "shared_rotated_outlier_mse"
+    assert torch.equal(key_segment.outlier_indices, value_segment.outlier_indices)
+    assert torch.equal(key_segment.regular_indices, value_segment.regular_indices)
+    assert key_segment.regular_bits == 2
+    assert key_segment.outlier_bits == 3
+    assert key_segment.outlier_indices.numel() == 8
+    assert key_segment.effective_index_bits == 2.5
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.5
+
+
+def test_paired_rotated_outlier_mse_shares_rotation_but_keeps_independent_indices():
+    torch.manual_seed(243)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="paired_rotated_outlier_mse",
+        value_quantizer="paired_rotated_outlier_mse",
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 6, 16)
+    value = torch.randn(1, 2, 6, 16)
+
+    out_key, out_value = cache.update(key, value, layer_idx=0)
+    key_segment = cache.key_cache[0][0]
+    value_segment = cache.value_cache[0][0]
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    assert isinstance(key_segment, RotatedOutlierMSESegment)
+    assert isinstance(value_segment, RotatedOutlierMSESegment)
+    assert key_segment.quantizer_kind == "paired_rotated_outlier_mse"
+    assert value_segment.quantizer_kind == "paired_rotated_outlier_mse"
+    assert key_segment.outlier_indices.numel() == 8
+    assert value_segment.outlier_indices.numel() == 8
+    assert key_segment.effective_index_bits == 2.5
+    assert value_segment.effective_index_bits == 2.5
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.5
+
+
+def test_attention_rotated_outlier_mse_accepts_query_states():
+    torch.manual_seed(241)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="attention_rotated_outlier_mse",
+        value_quantizer="attention_rotated_outlier_mse",
+        attention_error_query_tokens=2,
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 6, 16)
+    value = torch.randn(1, 2, 6, 16)
+    query = torch.randn(1, 4, 6, 16)
+
+    out_key, out_value = cache.update(
+        key,
+        value,
+        layer_idx=0,
+        cache_kwargs={"query_states": query, "scaling": 16**-0.5},
+    )
+    key_segment = cache.key_cache[0][0]
+    value_segment = cache.value_cache[0][0]
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    assert isinstance(key_segment, RotatedOutlierMSESegment)
+    assert isinstance(value_segment, RotatedOutlierMSESegment)
+    assert key_segment.quantizer_kind == "attention_rotated_outlier_mse"
+    assert value_segment.quantizer_kind == "attention_rotated_outlier_mse"
+    assert key_segment.regular_bits == 2
+    assert key_segment.outlier_bits == 3
+    assert key_segment.outlier_indices.numel() == 8
+    assert key_segment.effective_index_bits == 2.5
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.5
+
+
+def test_attention_adaptive_rotated_outlier_mse_keeps_fractional_budget():
+    torch.manual_seed(242)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="attention_adaptive_rotated_outlier_mse",
+        value_quantizer="mse",
+        attention_error_query_tokens=2,
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 6, 16)
+    value = torch.randn(1, 2, 6, 16)
+    query = torch.randn(1, 4, 6, 16)
+
+    out_key, out_value = cache.update(
+        key,
+        value,
+        layer_idx=0,
+        cache_kwargs={"query_states": query, "scaling": 16**-0.5},
+    )
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    assert isinstance(cache.key_cache[0][0], (OutlierMSESegment, RotatedOutlierMSESegment))
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.5
+
+
+def test_attention_adaptive_paired_rotated_outlier_mse_accepts_query_states():
+    torch.manual_seed(244)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="attention_adaptive_paired_rotated_outlier_mse",
+        value_quantizer="attention_adaptive_paired_rotated_outlier_mse",
+        attention_error_query_tokens=2,
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 6, 16)
+    value = torch.randn(1, 2, 6, 16)
+    query = torch.randn(1, 4, 6, 16)
+
+    out_key, out_value = cache.update(
+        key,
+        value,
+        layer_idx=0,
+        cache_kwargs={"query_states": query, "scaling": 16**-0.5},
+    )
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    assert isinstance(cache.key_cache[0][0], (OutlierMSESegment, RotatedOutlierMSESegment))
+    assert isinstance(cache.value_cache[0][0], (OutlierMSESegment, RotatedOutlierMSESegment))
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.5
+
+
+def test_entropy_guarded_paired_rotated_outlier_mse_switches_by_attention_entropy():
+    torch.manual_seed(245)
+    key = torch.randn(1, 2, 6, 16)
+    value = torch.randn(1, 2, 6, 16)
+    query = torch.randn(1, 4, 6, 16)
+    high_cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="entropy_guarded_paired_rotated_outlier_mse",
+        value_quantizer="entropy_guarded_paired_rotated_outlier_mse",
+        attention_error_query_tokens=2,
+        attention_entropy_threshold=1.0,
+    )
+    low_cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="entropy_guarded_paired_rotated_outlier_mse",
+        value_quantizer="entropy_guarded_paired_rotated_outlier_mse",
+        attention_error_query_tokens=2,
+        attention_entropy_threshold=0.0,
+    )
+
+    high_cache = TurboQuantDynamicCache(high_cfg)
+    low_cache = TurboQuantDynamicCache(low_cfg)
+    high_cache.update(key, value, layer_idx=0, cache_kwargs={"query_states": query, "scaling": 16**-0.5})
+    low_cache.update(key, value, layer_idx=0, cache_kwargs={"query_states": query, "scaling": 16**-0.5})
+
+    assert isinstance(high_cache.key_cache[0][0], RotatedOutlierMSESegment)
+    assert isinstance(high_cache.value_cache[0][0], RotatedOutlierMSESegment)
+    assert high_cache.key_cache[0][0].quantizer_kind == "entropy_guarded_paired_rotated_outlier_mse"
+    assert isinstance(low_cache.key_cache[0][0], OutlierMSESegment)
+    assert isinstance(low_cache.value_cache[0][0], OutlierMSESegment)
+    assert high_cache.compression_summary()["avg_effective_index_bits"] == 2.5
+    assert low_cache.compression_summary()["avg_effective_index_bits"] == 2.5
+
+
+def test_rotated_outlier_mse_integer_bits_match_mse_path():
+    torch.manual_seed(25)
+    key = torch.randn(1, 2, 6, 16)
+    value = torch.randn(1, 2, 6, 16)
+    baseline = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(3, codebook_grid_size=10_001, key_quantizer="mse", value_quantizer="mse")
+    )
+    candidate = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(
+            3,
+            codebook_grid_size=10_001,
+            key_quantizer="rotated_outlier_mse",
+            value_quantizer="rotated_outlier_mse",
+        )
+    )
+
+    baseline_key, baseline_value = baseline.update(key, value, layer_idx=0)
+    candidate_key, candidate_value = candidate.update(key, value, layer_idx=0)
+
+    assert isinstance(candidate.key_cache[0][0], PackedMSESegment)
+    assert torch.allclose(candidate_key, baseline_key)
+    assert torch.allclose(candidate_value, baseline_value)
+
+
 def test_fractional_bits_can_use_quarter_high2_allocation():
     cfg = make_kv_config_from_effective_bits(
         2.5,
@@ -659,6 +943,232 @@ def test_regular_gain_mse_applies_only_to_fractional_regular_subsegments():
             assert cache.compression_summary()["avg_effective_index_bits"] == bits
 
 
+def test_adaptive_regular_gain_mse_selects_lower_reconstruction_error_candidate():
+    torch.manual_seed(309)
+    key = torch.randn(1, 2, 8, 16)
+    value = torch.randn(1, 2, 8, 16)
+    baseline = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(
+            2.5,
+            seed=123,
+            codebook_grid_size=10_001,
+            key_quantizer="mse",
+            value_quantizer="mse",
+        )
+    )
+    gain = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(
+            2.5,
+            seed=123,
+            codebook_grid_size=10_001,
+            key_quantizer="regular_gain_mse",
+            value_quantizer="regular_gain_mse",
+        )
+    )
+    adaptive = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(
+            2.5,
+            seed=123,
+            codebook_grid_size=10_001,
+            key_quantizer="adaptive_regular_gain_mse",
+            value_quantizer="adaptive_regular_gain_mse",
+        )
+    )
+
+    baseline_key, baseline_value = baseline.update(key, value, layer_idx=0)
+    gain_key, gain_value = gain.update(key, value, layer_idx=0)
+    adaptive_key, adaptive_value = adaptive.update(key, value, layer_idx=0)
+
+    def mse(original: torch.Tensor, decoded: torch.Tensor) -> torch.Tensor:
+        return torch.mean((original.to(torch.float32) - decoded.to(torch.float32)) ** 2)
+
+    assert mse(key, adaptive_key) <= torch.minimum(mse(key, baseline_key), mse(key, gain_key)) + 1e-6
+    assert mse(value, adaptive_value) <= torch.minimum(mse(value, baseline_value), mse(value, gain_value)) + 1e-6
+    assert adaptive.compression_summary()["avg_effective_index_bits"] == 2.5
+
+
+def test_attention_adaptive_regular_gain_mse_selects_lower_attention_proxy_candidate():
+    torch.manual_seed(310)
+    query = torch.randn(1, 4, 8, 16)
+    key = torch.randn(1, 2, 8, 16)
+    value = torch.randn(1, 2, 8, 16)
+    common = {
+        "seed": 123,
+        "codebook_grid_size": 10_001,
+        "attention_error_query_tokens": 2,
+    }
+    baseline = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(2.5, key_quantizer="mse", value_quantizer="mse", **common)
+    )
+    gain = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(
+            2.5,
+            key_quantizer="regular_gain_mse",
+            value_quantizer="regular_gain_mse",
+            **common,
+        )
+    )
+    adaptive = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(
+            2.5,
+            key_quantizer="attention_adaptive_regular_gain_mse",
+            value_quantizer="attention_adaptive_regular_gain_mse",
+            **common,
+        )
+    )
+    kwargs = {"query_states": query, "scaling": 16**-0.5}
+
+    baseline_key, baseline_value = baseline.update(key, value, layer_idx=0, cache_kwargs=kwargs)
+    gain_key, gain_value = gain.update(key, value, layer_idx=0, cache_kwargs=kwargs)
+    adaptive_key, adaptive_value = adaptive.update(key, value, layer_idx=0, cache_kwargs=kwargs)
+
+    def proxy(cache: TurboQuantDynamicCache, original: torch.Tensor, decoded: torch.Tensor, name: str) -> float:
+        return cache._attention_auto_mse_error(
+            original,
+            decoded,
+            name=name,
+            query_states=query,
+            key_states_for_attention=key,
+            scaling=16**-0.5,
+        )
+
+    assert proxy(adaptive, key, adaptive_key, "key") <= min(
+        proxy(baseline, key, baseline_key, "key"),
+        proxy(gain, key, gain_key, "key"),
+    ) + 1e-7
+    assert proxy(adaptive, value, adaptive_value, "value") <= min(
+        proxy(baseline, value, baseline_value, "value"),
+        proxy(gain, value, gain_value, "value"),
+    ) + 1e-7
+    assert adaptive.compression_summary()["avg_effective_index_bits"] == 2.5
+
+
+def test_distortion_regime_mse_switches_reconstruction_by_subsegment_bits():
+    torch.manual_seed(244)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="distortion_regime_mse",
+        value_quantizer="distortion_regime_mse",
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 6, 16)
+    value = torch.randn(1, 2, 6, 16)
+
+    out_key, out_value = cache.update(key, value, layer_idx=0)
+    key_segment = cache.key_cache[0][0]
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    assert isinstance(key_segment, OutlierMSESegment)
+    assert isinstance(key_segment.regular, PackedMSESegment)
+    assert key_segment.regular.quantizer_kind == "gain_mse"
+    assert key_segment.regular.bits == 2
+    assert isinstance(key_segment.outlier, PackedMSESegment)
+    assert key_segment.outlier.quantizer_kind == "learned_unit_mse_block2"
+    assert key_segment.outlier.bits == 3
+    assert key_segment.outlier.block_size == 2
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.5
+
+
+def test_gain_unit_regime_mse_switches_by_subsegment_bits():
+    torch.manual_seed(245)
+    key = torch.randn(1, 2, 6, 16)
+    value = torch.randn(1, 2, 6, 16)
+
+    low_cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="gain_unit_regime_mse",
+        value_quantizer="gain_unit_regime_mse",
+    )
+    low_cache = TurboQuantDynamicCache(low_cfg)
+    low_key, low_value = low_cache.update(key, value, layer_idx=0)
+    low_segment = low_cache.key_cache[0][0]
+
+    assert low_key.shape == key.shape
+    assert low_value.shape == value.shape
+    assert isinstance(low_segment, OutlierMSESegment)
+    assert isinstance(low_segment.regular, PackedMSESegment)
+    assert isinstance(low_segment.outlier, PackedMSESegment)
+    assert low_segment.regular.quantizer_kind == "gain_mse"
+    assert low_segment.regular.bits == 2
+    assert low_segment.outlier.quantizer_kind == "unit_mse"
+    assert low_segment.outlier.bits == 3
+    assert low_cache.compression_summary()["avg_effective_index_bits"] == 2.5
+
+    high_cfg = make_kv_config_from_effective_bits(
+        3.5,
+        codebook_grid_size=10_001,
+        key_quantizer="gain_unit_regime_mse",
+        value_quantizer="gain_unit_regime_mse",
+    )
+    high_cache = TurboQuantDynamicCache(high_cfg)
+    high_key, high_value = high_cache.update(key, value, layer_idx=0)
+    high_segment = high_cache.key_cache[0][0]
+
+    assert high_key.shape == key.shape
+    assert high_value.shape == value.shape
+    assert isinstance(high_segment, OutlierMSESegment)
+    assert isinstance(high_segment.regular, PackedMSESegment)
+    assert isinstance(high_segment.outlier, PackedMSESegment)
+    assert high_segment.regular.quantizer_kind == "unit_mse"
+    assert high_segment.regular.bits == 3
+    assert high_segment.outlier.quantizer_kind == "unit_mse"
+    assert high_segment.outlier.bits == 4
+    assert high_cache.compression_summary()["avg_effective_index_bits"] == 3.5
+
+
+def test_rate_regime_mse_switches_by_requested_effective_bits():
+    torch.manual_seed(246)
+    key = torch.randn(1, 2, 6, 16)
+    value = torch.randn(1, 2, 6, 16)
+
+    low_cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="rate_regime_mse",
+        value_quantizer="rate_regime_mse",
+    )
+    low_cache = TurboQuantDynamicCache(low_cfg)
+    low_key, low_value = low_cache.update(key, value, layer_idx=0)
+    low_segment = low_cache.key_cache[0][0]
+
+    assert low_key.shape == key.shape
+    assert low_value.shape == value.shape
+    assert isinstance(low_segment, OutlierMSESegment)
+    assert isinstance(low_segment.regular, PackedMSESegment)
+    assert isinstance(low_segment.outlier, PackedMSESegment)
+    assert low_segment.regular.quantizer_kind == "gain_mse"
+    assert low_segment.regular.bits == 2
+    assert low_segment.outlier.quantizer_kind == "gain_mse"
+    assert low_segment.outlier.bits == 3
+    assert low_cache.compression_summary()["avg_effective_index_bits"] == 2.5
+
+    high_cfg = make_kv_config_from_effective_bits(
+        3.5,
+        codebook_grid_size=10_001,
+        key_quantizer="rate_regime_mse",
+        value_quantizer="rate_regime_mse",
+    )
+    high_cache = TurboQuantDynamicCache(high_cfg)
+    high_key, high_value = high_cache.update(key, value, layer_idx=0)
+    high_segment = high_cache.key_cache[0][0]
+
+    assert high_key.shape == key.shape
+    assert high_value.shape == value.shape
+    assert isinstance(high_segment, OutlierMSESegment)
+    assert isinstance(high_segment.regular, PackedMSESegment)
+    assert isinstance(high_segment.outlier, PackedMSESegment)
+    assert high_segment.regular.quantizer_kind == "learned_unit_mse_block2"
+    assert high_segment.regular.bits == 3
+    assert high_segment.regular.block_size == 2
+    assert high_segment.outlier.quantizer_kind == "learned_unit_mse_block2"
+    assert high_segment.outlier.bits == 4
+    assert high_segment.outlier.block_size == 2
+    assert high_cache.compression_summary()["avg_effective_index_bits"] == 3.5
+
+
 def test_auto_mse_keeps_fractional_bit_budget():
     cfg = make_kv_config_from_effective_bits(
         2.5,
@@ -877,6 +1387,877 @@ def test_turboquant_dynamic_cache_supports_hadamard_mse_segments():
     assert isinstance(cache.key_cache[0][0], PackedMSESegment)
     assert cache.key_cache[0][0].quantizer_kind == "hadamard_mse"
     assert cache.storage_nbytes() < cache.materialized_nbytes()
+
+
+def test_turboquant_dynamic_cache_supports_outlier_hadamard_mse_segments():
+    torch.manual_seed(28)
+    cfg = make_kv_config_from_effective_bits(
+        2,
+        codebook_grid_size=10_001,
+        key_quantizer="outlier_hadamard_mse",
+        value_quantizer="outlier_hadamard_mse",
+        outlier_hadamard_block_size=8,
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    channel_scale = torch.linspace(0.5, 4.0, 16).view(1, 1, 1, 16)
+    key = torch.randn(1, 2, 32, 16) * channel_scale
+    value = torch.randn(1, 2, 32, 16) * channel_scale
+
+    out_k, out_v = cache.update(key, value, layer_idx=0)
+
+    assert out_k.shape == key.shape
+    assert out_v.shape == value.shape
+    key_segment = cache.key_cache[0][0]
+    value_segment = cache.value_cache[0][0]
+    assert isinstance(key_segment, OutlierHadamardSegment)
+    assert isinstance(value_segment, OutlierHadamardSegment)
+    assert key_segment.block_size == 8
+    assert key_segment.permutation.numel() == 16
+    assert key_segment.signs.numel() == 16
+    assert sorted(key_segment.permutation.tolist()) == list(range(16))
+    assert cache.compression_summary()["segment_types"] == {"OutlierHadamardSegment": 2}
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.0
+    assert cache.storage_nbytes() < cache.materialized_nbytes()
+
+
+def test_outlier_hadamard_mse_supports_fractional_effective_bits():
+    torch.manual_seed(29)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="outlier_hadamard_mse",
+        value_quantizer="outlier_hadamard_mse",
+        outlier_hadamard_block_size=8,
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 12, 16)
+    value = torch.randn(1, 2, 12, 16)
+
+    out_k, out_v = cache.update(key, value, layer_idx=0)
+
+    assert out_k.shape == key.shape
+    assert out_v.shape == value.shape
+    key_segment = cache.key_cache[0][0]
+    assert isinstance(key_segment, OutlierMSESegment)
+    assert isinstance(key_segment.regular, OutlierHadamardSegment)
+    assert isinstance(key_segment.outlier, OutlierHadamardSegment)
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.5
+    assert cache.storage_nbytes() < cache.materialized_nbytes()
+
+
+def test_adaptive_outlier_hadamard_mse_never_exceeds_baseline_segment_mse():
+    torch.manual_seed(301)
+    baseline_cfg = make_kv_config_from_effective_bits(
+        2,
+        codebook_grid_size=10_001,
+        key_quantizer="mse",
+        value_quantizer="mse",
+        outlier_hadamard_block_size=8,
+    )
+    adaptive_cfg = make_kv_config_from_effective_bits(
+        2,
+        codebook_grid_size=10_001,
+        key_quantizer="adaptive_outlier_hadamard_mse",
+        value_quantizer="adaptive_outlier_hadamard_mse",
+        outlier_hadamard_block_size=8,
+    )
+    baseline_cache = TurboQuantDynamicCache(baseline_cfg)
+    adaptive_cache = TurboQuantDynamicCache(adaptive_cfg)
+    channel_scale = torch.linspace(0.25, 5.0, 16).view(1, 1, 1, 16)
+    key = torch.randn(1, 2, 24, 16) * channel_scale
+    value = torch.randn(1, 2, 24, 16) * channel_scale
+
+    base_k, base_v = baseline_cache.update(key, value, layer_idx=0)
+    adaptive_k, adaptive_v = adaptive_cache.update(key, value, layer_idx=0)
+
+    assert adaptive_k.shape == key.shape
+    assert adaptive_v.shape == value.shape
+    assert torch.mean((key - adaptive_k) ** 2) <= torch.mean((key - base_k) ** 2) + 1e-6
+    assert torch.mean((value - adaptive_v) ** 2) <= torch.mean((value - base_v) ** 2) + 1e-6
+
+
+def test_vector_adaptive_outlier_hadamard_selects_per_vector_candidates():
+    torch.manual_seed(302)
+    baseline_cfg = make_kv_config_from_effective_bits(
+        2,
+        codebook_grid_size=10_001,
+        key_quantizer="mse",
+        value_quantizer="mse",
+        outlier_hadamard_block_size=8,
+    )
+    adaptive_cfg = make_kv_config_from_effective_bits(
+        2,
+        codebook_grid_size=10_001,
+        key_quantizer="vector_adaptive_outlier_hadamard_mse",
+        value_quantizer="vector_adaptive_outlier_hadamard_mse",
+        outlier_hadamard_block_size=8,
+    )
+    baseline_cache = TurboQuantDynamicCache(baseline_cfg)
+    adaptive_cache = TurboQuantDynamicCache(adaptive_cfg)
+    channel_scale = torch.linspace(0.25, 5.0, 16).view(1, 1, 1, 16)
+    key = torch.randn(1, 2, 24, 16) * channel_scale
+    value = torch.randn(1, 2, 24, 16) * channel_scale
+
+    base_k, base_v = baseline_cache.update(key, value, layer_idx=0)
+    adaptive_k, adaptive_v = adaptive_cache.update(key, value, layer_idx=0)
+
+    assert adaptive_k.shape == key.shape
+    assert adaptive_v.shape == value.shape
+    assert torch.mean((key - adaptive_k) ** 2) <= torch.mean((key - base_k) ** 2) + 1e-6
+    assert torch.mean((value - adaptive_v) ** 2) <= torch.mean((value - base_v) ** 2) + 1e-6
+    segment_types = adaptive_cache.compression_summary()["segment_types"]
+    assert sum(segment_types.values()) >= 2
+    assert adaptive_cache.compression_summary()["avg_effective_index_bits"] == 2.0
+    assert adaptive_cache.storage_nbytes() < adaptive_cache.materialized_nbytes()
+
+
+def test_vector_adaptive_outlier_hadamard_supports_fractional_bits():
+    torch.manual_seed(303)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="vector_adaptive_outlier_hadamard_mse",
+        value_quantizer="vector_adaptive_outlier_hadamard_mse",
+        outlier_hadamard_block_size=8,
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 12, 16)
+    value = torch.randn(1, 2, 12, 16)
+
+    out_k, out_v = cache.update(key, value, layer_idx=0)
+
+    assert out_k.shape == key.shape
+    assert out_v.shape == value.shape
+    key_segment = cache.key_cache[0][0]
+    assert isinstance(key_segment, OutlierMSESegment)
+    assert isinstance(
+        key_segment.regular,
+        (VectorAdaptiveRotationSegment, PackedMSESegment, OutlierHadamardSegment),
+    )
+    assert isinstance(
+        key_segment.outlier,
+        (VectorAdaptiveRotationSegment, PackedMSESegment, OutlierHadamardSegment),
+    )
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.5
+    assert cache.storage_nbytes() < cache.materialized_nbytes()
+
+
+def test_margin_vector_outlier_hadamard_supports_fractional_bits():
+    torch.manual_seed(304)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="margin_vector_outlier_hadamard_mse",
+        value_quantizer="margin_vector_outlier_hadamard_mse",
+        outlier_hadamard_block_size=8,
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 12, 16)
+    value = torch.randn(1, 2, 12, 16)
+
+    out_k, out_v = cache.update(key, value, layer_idx=0)
+
+    assert out_k.shape == key.shape
+    assert out_v.shape == value.shape
+    key_segment = cache.key_cache[0][0]
+    assert isinstance(key_segment, OutlierMSESegment)
+    assert isinstance(
+        key_segment.regular,
+        (VectorAdaptiveRotationSegment, PackedMSESegment, OutlierHadamardSegment),
+    )
+    assert isinstance(
+        key_segment.outlier,
+        (VectorAdaptiveRotationSegment, PackedMSESegment, OutlierHadamardSegment),
+    )
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.5
+    assert cache.storage_nbytes() < cache.materialized_nbytes()
+
+
+def test_attention_adaptive_outlier_hadamard_supports_fractional_bits():
+    torch.manual_seed(305)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="attention_adaptive_outlier_hadamard_mse",
+        value_quantizer="attention_adaptive_outlier_hadamard_mse",
+        outlier_hadamard_block_size=8,
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 12, 16)
+    value = torch.randn(1, 2, 12, 16)
+    query = torch.randn(1, 4, 12, 16)
+
+    out_k, out_v = cache.update(key, value, layer_idx=0, cache_kwargs={"query_states": query, "scaling": 16**-0.5})
+
+    assert out_k.shape == key.shape
+    assert out_v.shape == value.shape
+    key_segment = cache.key_cache[0][0]
+    value_segment = cache.value_cache[0][0]
+    assert isinstance(key_segment, (OutlierMSESegment, PackedMSESegment, OutlierHadamardSegment))
+    assert isinstance(value_segment, (OutlierMSESegment, PackedMSESegment, OutlierHadamardSegment))
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.5
+    assert cache.storage_nbytes() < cache.materialized_nbytes()
+
+
+def test_regular_outlier_hadamard_keeps_outlier_subsegment_on_mse():
+    torch.manual_seed(30)
+    cfg = make_kv_config_from_effective_bits(
+        3.5,
+        codebook_grid_size=10_001,
+        key_quantizer="regular_outlier_hadamard_mse",
+        value_quantizer="regular_outlier_hadamard_mse",
+        outlier_hadamard_block_size=8,
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 12, 16)
+    value = torch.randn(1, 2, 12, 16)
+
+    out_k, out_v = cache.update(key, value, layer_idx=0)
+
+    assert out_k.shape == key.shape
+    assert out_v.shape == value.shape
+    key_segment = cache.key_cache[0][0]
+    assert isinstance(key_segment, OutlierMSESegment)
+    assert isinstance(key_segment.regular, OutlierHadamardSegment)
+    assert isinstance(key_segment.outlier, PackedMSESegment)
+    assert key_segment.outlier.quantizer_kind == "mse"
+    assert cache.compression_summary()["avg_effective_index_bits"] == 3.5
+
+
+def test_outlier_only_hadamard_keeps_regular_subsegment_on_mse():
+    torch.manual_seed(301)
+    cfg = make_kv_config_from_effective_bits(
+        3.5,
+        codebook_grid_size=10_001,
+        key_quantizer="outlier_only_hadamard_mse",
+        value_quantizer="outlier_only_hadamard_mse",
+        outlier_hadamard_block_size=8,
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 12, 16)
+    value = torch.randn(1, 2, 12, 16)
+
+    out_k, out_v = cache.update(key, value, layer_idx=0)
+
+    assert out_k.shape == key.shape
+    assert out_v.shape == value.shape
+    key_segment = cache.key_cache[0][0]
+    assert isinstance(key_segment, OutlierMSESegment)
+    assert isinstance(key_segment.regular, PackedMSESegment)
+    assert key_segment.regular.quantizer_kind == "mse"
+    assert isinstance(key_segment.outlier, OutlierHadamardSegment)
+    assert cache.compression_summary()["avg_effective_index_bits"] == 3.5
+
+
+def test_attention_scale_mse_uses_query_projection_for_key_scales():
+    torch.manual_seed(31)
+    cfg = make_kv_config_from_effective_bits(
+        2,
+        codebook_grid_size=10_001,
+        key_quantizer="attention_scale_mse",
+        value_quantizer="attention_scale_mse",
+        attention_error_query_tokens=2,
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 8, 16)
+    value = torch.randn(1, 2, 8, 16)
+    query = torch.randn(1, 4, 8, 16)
+
+    out_key, out_value = cache.update(
+        key,
+        value,
+        layer_idx=0,
+        cache_kwargs={"query_states": query, "scaling": 16**-0.5},
+    )
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    key_segment = cache.key_cache[0][0]
+    value_segment = cache.value_cache[0][0]
+    assert isinstance(key_segment, PackedMSESegment)
+    assert isinstance(value_segment, PackedMSESegment)
+    assert key_segment.quantizer_kind == "mse"
+    assert value_segment.quantizer_kind == "mse"
+    base = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(2, codebook_grid_size=10_001, key_quantizer="mse", value_quantizer="mse")
+    )
+    base.update(key, value, layer_idx=0)
+    assert not torch.allclose(key_segment.norms, base.key_cache[0][0].norms)
+    assert torch.allclose(value_segment.norms, base.value_cache[0][0].norms)
+
+
+def test_layer_rotation_indices_change_seed_without_metadata():
+    torch.manual_seed(33)
+    key = torch.randn(1, 2, 8, 16)
+    value = torch.randn(1, 2, 8, 16)
+    baseline = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(2, codebook_grid_size=10_001, key_quantizer="mse", value_quantizer="mse")
+    )
+    scheduled = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(
+            2,
+            codebook_grid_size=10_001,
+            key_quantizer="mse",
+            value_quantizer="mse",
+            layer_key_rotation_indices=(1,),
+            layer_value_rotation_indices=(2,),
+        )
+    )
+
+    base_key, base_value = baseline.update(key, value, layer_idx=0)
+    scheduled_key, scheduled_value = scheduled.update(key, value, layer_idx=0)
+    key_segment = scheduled.key_cache[0][0]
+
+    assert isinstance(key_segment, PackedMSESegment)
+    assert key_segment.packed_rotation_ids is None
+    assert not torch.allclose(base_key, scheduled_key)
+    assert not torch.allclose(base_value, scheduled_value)
+    summary = scheduled.compression_summary()
+    assert summary["layer_key_rotation_indices"] == [1]
+    assert summary["layer_value_rotation_indices"] == [2]
+    assert scheduled.storage_nbytes() == baseline.storage_nbytes()
+
+
+def test_layer_rotation_indices_apply_to_fractional_subsegments():
+    torch.manual_seed(34)
+    key = torch.randn(1, 2, 8, 16)
+    value = torch.randn(1, 2, 8, 16)
+    baseline = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(2.5, codebook_grid_size=10_001, key_quantizer="mse", value_quantizer="mse")
+    )
+    scheduled = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(
+            2.5,
+            codebook_grid_size=10_001,
+            key_quantizer="mse",
+            value_quantizer="mse",
+            layer_key_rotation_indices=(1,),
+            layer_value_rotation_indices=(2,),
+        )
+    )
+
+    base_key, base_value = baseline.update(key, value, layer_idx=0)
+    scheduled_key, scheduled_value = scheduled.update(key, value, layer_idx=0)
+    key_segment = scheduled.key_cache[0][0]
+
+    assert isinstance(key_segment, OutlierMSESegment)
+    assert isinstance(key_segment.regular, PackedMSESegment)
+    assert isinstance(key_segment.outlier, PackedMSESegment)
+    assert key_segment.regular.packed_rotation_ids is None
+    assert key_segment.outlier.packed_rotation_ids is None
+    assert not torch.allclose(base_key, scheduled_key)
+    assert not torch.allclose(base_value, scheduled_value)
+    assert scheduled.storage_nbytes() == baseline.storage_nbytes()
+
+
+def test_regular_attention_scale_mse_applies_to_regular_key_subsegment():
+    torch.manual_seed(32)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="regular_attention_scale_mse",
+        value_quantizer="regular_attention_scale_mse",
+        attention_error_query_tokens=2,
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 8, 16)
+    value = torch.randn(1, 2, 8, 16)
+    query = torch.randn(1, 4, 8, 16)
+
+    out_key, out_value = cache.update(
+        key,
+        value,
+        layer_idx=0,
+        cache_kwargs={"query_states": query, "scaling": 16**-0.5},
+    )
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    key_segment = cache.key_cache[0][0]
+    value_segment = cache.value_cache[0][0]
+    assert isinstance(key_segment, OutlierMSESegment)
+    assert isinstance(value_segment, OutlierMSESegment)
+    assert isinstance(key_segment.regular, PackedMSESegment)
+    assert isinstance(key_segment.outlier, PackedMSESegment)
+    assert key_segment.regular.quantizer_kind == "mse"
+    assert key_segment.outlier.quantizer_kind == "mse"
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.5
+
+
+def test_rotation_bank_mse_bank1_matches_mse():
+    torch.manual_seed(18)
+    key = torch.randn(1, 2, 8, 16)
+    value = torch.randn(1, 2, 8, 16)
+    baseline = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(2, codebook_grid_size=10_001, key_quantizer="mse", value_quantizer="mse")
+    )
+    candidate = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(
+            2,
+            codebook_grid_size=10_001,
+            key_quantizer="rotation_bank_mse",
+            value_quantizer="rotation_bank_mse",
+            rotation_bank_size=1,
+        )
+    )
+
+    base_key, base_value = baseline.update(key, value, layer_idx=0)
+    cand_key, cand_value = candidate.update(key, value, layer_idx=0)
+    key_segment = candidate.key_cache[0][0]
+
+    assert isinstance(key_segment, PackedMSESegment)
+    assert key_segment.quantizer_kind == "rotation_bank_mse"
+    assert key_segment.packed_rotation_ids is not None
+    assert key_segment.rotation_id_bits == 1
+    rotation_ids = unpack_indices(key_segment.packed_rotation_ids, bits=1, shape=key_segment.shape[:-1])
+    assert torch.equal(rotation_ids, torch.zeros_like(rotation_ids))
+    assert torch.allclose(cand_key, base_key)
+    assert torch.allclose(cand_value, base_value)
+
+
+def test_rotation_bank_mse_selects_lower_reconstruction_error_than_base_rotation():
+    torch.manual_seed(19)
+    key = torch.randn(1, 2, 16, 16)
+    value = torch.randn(1, 2, 16, 16)
+    baseline = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(2, codebook_grid_size=10_001, key_quantizer="mse", value_quantizer="mse")
+    )
+    candidate = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(
+            2,
+            codebook_grid_size=10_001,
+            key_quantizer="rotation_bank_mse",
+            value_quantizer="rotation_bank_mse",
+            rotation_bank_size=4,
+        )
+    )
+
+    base_key, base_value = baseline.update(key, value, layer_idx=0)
+    cand_key, cand_value = candidate.update(key, value, layer_idx=0)
+
+    assert torch.mean((key - cand_key) ** 2) <= torch.mean((key - base_key) ** 2) + 1e-6
+    assert torch.mean((value - cand_value) ** 2) <= torch.mean((value - base_value) ** 2) + 1e-6
+    assert candidate.key_cache[0][0].rotation_id_bits == 2
+    assert candidate.storage_nbytes() > baseline.storage_nbytes()
+    assert candidate.storage_nbytes() < candidate.materialized_nbytes()
+
+
+def test_attention_rotation_bank_mse_supports_fractional_bits_with_queries():
+    torch.manual_seed(21)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="attention_rotation_bank_mse",
+        value_quantizer="attention_rotation_bank_mse",
+        rotation_bank_size=3,
+        attention_error_query_tokens=2,
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 6, 16)
+    value = torch.randn(1, 2, 6, 16)
+    query = torch.randn(1, 4, 6, 16)
+
+    out_key, out_value = cache.update(
+        key,
+        value,
+        layer_idx=0,
+        cache_kwargs={"query_states": query, "scaling": 16**-0.5},
+    )
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    key_segment = cache.key_cache[0][0]
+    value_segment = cache.value_cache[0][0]
+    assert isinstance(key_segment, OutlierMSESegment)
+    assert isinstance(value_segment, OutlierMSESegment)
+    assert isinstance(key_segment.regular, PackedMSESegment)
+    assert key_segment.regular.quantizer_kind == "attention_rotation_bank_mse"
+    assert key_segment.regular.packed_rotation_ids is not None
+    assert key_segment.regular.rotation_id_bits == 2
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.5
+    assert cache.storage_nbytes() < cache.materialized_nbytes()
+
+
+def test_segment_rotation_bank_mse_bank1_matches_mse():
+    torch.manual_seed(26)
+    key = torch.randn(1, 2, 8, 16)
+    value = torch.randn(1, 2, 8, 16)
+    baseline = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(2.5, codebook_grid_size=10_001, key_quantizer="mse", value_quantizer="mse")
+    )
+    candidate = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(
+            2.5,
+            codebook_grid_size=10_001,
+            key_quantizer="segment_rotation_bank_mse",
+            value_quantizer="segment_rotation_bank_mse",
+            rotation_bank_size=1,
+        )
+    )
+
+    base_key, base_value = baseline.update(key, value, layer_idx=0)
+    cand_key, cand_value = candidate.update(key, value, layer_idx=0)
+
+    assert torch.allclose(cand_key, base_key)
+    assert torch.allclose(cand_value, base_value)
+    assert candidate.compression_summary()["avg_effective_index_bits"] == 2.5
+
+
+def test_segment_rotation_bank_mse_selects_lower_segment_error_than_base_rotation():
+    torch.manual_seed(27)
+    key = torch.randn(1, 2, 16, 16)
+    value = torch.randn(1, 2, 16, 16)
+    baseline = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(2.5, codebook_grid_size=10_001, key_quantizer="mse", value_quantizer="mse")
+    )
+    candidate = TurboQuantDynamicCache(
+        make_kv_config_from_effective_bits(
+            2.5,
+            codebook_grid_size=10_001,
+            key_quantizer="segment_rotation_bank_mse",
+            value_quantizer="segment_rotation_bank_mse",
+            rotation_bank_size=4,
+        )
+    )
+
+    base_key, base_value = baseline.update(key, value, layer_idx=0)
+    cand_key, cand_value = candidate.update(key, value, layer_idx=0)
+
+    assert torch.mean((key - cand_key) ** 2) <= torch.mean((key - base_key) ** 2) + 1e-6
+    assert torch.mean((value - cand_value) ** 2) <= torch.mean((value - base_value) ** 2) + 1e-6
+    assert candidate.storage_nbytes() > baseline.storage_nbytes()
+    assert candidate.storage_nbytes() < candidate.materialized_nbytes()
+
+
+def test_head_hadamard_mse_mixes_and_restores_kv_heads():
+    torch.manual_seed(302)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="head_hadamard_mse",
+        value_quantizer="head_hadamard_mse",
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 4, 12, 16)
+    value = torch.randn(1, 4, 12, 16)
+
+    transformed = cache._apply_head_hadamard_transform(key, name="key", layer_idx=0)
+    restored = cache._inverse_head_hadamard_transform(transformed, name="key", layer_idx=0)
+    out_key, out_value = cache.update(key, value, layer_idx=0)
+
+    assert torch.allclose(restored, key, rtol=1e-4, atol=1e-4)
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    key_segment = cache.key_cache[0][0]
+    assert isinstance(key_segment, HeadHadamardSegment)
+    assert isinstance(key_segment.residual, OutlierMSESegment)
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.5
+    assert cache.storage_nbytes() < cache.materialized_nbytes()
+
+
+def test_hadamard_residual_mse_uses_fractional_bits_for_residual_signs():
+    torch.manual_seed(303)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="hadamard_residual_mse",
+        value_quantizer="hadamard_residual_mse",
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 12, 16)
+    value = torch.randn(1, 2, 12, 16)
+
+    out_key, out_value = cache.update(key, value, layer_idx=0)
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    key_segment = cache.key_cache[0][0]
+    assert isinstance(key_segment, HadamardResidualSegment)
+    assert isinstance(key_segment.base, PackedMSESegment)
+    assert key_segment.base_bits == 2
+    assert key_segment.residual_indices.numel() == 8
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.5
+    assert cache.storage_nbytes() < cache.materialized_nbytes()
+
+
+def test_attention_hadamard_residual_mse_accepts_query_states():
+    torch.manual_seed(304)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="attention_hadamard_residual_mse",
+        value_quantizer="mse",
+        attention_error_query_tokens=2,
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 12, 16)
+    value = torch.randn(1, 2, 12, 16)
+    query = torch.randn(1, 4, 12, 16)
+
+    out_key, out_value = cache.update(
+        key,
+        value,
+        layer_idx=0,
+        cache_kwargs={"query_states": query, "scaling": 16**-0.5},
+    )
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    assert isinstance(cache.key_cache[0][0], (OutlierMSESegment, HadamardResidualSegment))
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.5
+
+
+def test_attention_weighted_hadamard_residual_selects_query_sensitive_coefficients():
+    torch.manual_seed(3041)
+    baseline_cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="hadamard_residual_mse",
+        value_quantizer="mse",
+        attention_error_query_tokens=2,
+    )
+    attention_cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="attention_weighted_hadamard_residual_mse",
+        value_quantizer="mse",
+        attention_error_query_tokens=2,
+    )
+    baseline = TurboQuantDynamicCache(baseline_cfg)
+    attention = TurboQuantDynamicCache(attention_cfg)
+    key = torch.randn(1, 2, 12, 16)
+    value = torch.randn(1, 2, 12, 16)
+    query = torch.randn(1, 4, 12, 16)
+
+    base_key, _ = baseline.update(
+        key,
+        value,
+        layer_idx=0,
+        cache_kwargs={"query_states": query, "scaling": 16**-0.5},
+    )
+    out_key, out_value = attention.update(
+        key,
+        value,
+        layer_idx=0,
+        cache_kwargs={"query_states": query, "scaling": 16**-0.5},
+    )
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    base_segment = baseline.key_cache[0][0]
+    attention_segment = attention.key_cache[0][0]
+    assert isinstance(base_segment, HadamardResidualSegment)
+    assert isinstance(attention_segment, HadamardResidualSegment)
+    assert attention_segment.base_bits == 2
+    assert attention_segment.residual_indices.numel() == 8
+    assert not torch.equal(attention_segment.residual_indices, base_segment.residual_indices)
+    assert not torch.allclose(out_key, base_key)
+    assert attention.compression_summary()["avg_effective_index_bits"] == 2.5
+
+
+def test_attention_outlier_hadamard_mse_accepts_query_states_for_values():
+    torch.manual_seed(305)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="mse",
+        value_quantizer="attention_outlier_hadamard_mse",
+        outlier_hadamard_block_size=8,
+        attention_error_query_tokens=2,
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 12, 16)
+    value = torch.randn(1, 2, 12, 16)
+    query = torch.randn(1, 4, 12, 16)
+
+    out_key, out_value = cache.update(
+        key,
+        value,
+        layer_idx=0,
+        cache_kwargs={"query_states": query, "scaling": 16**-0.5},
+    )
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    assert isinstance(cache.value_cache[0][0], (OutlierMSESegment, PackedMSESegment))
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.5
+
+
+def test_bitwidth_attention_outlier_hadamard_switches_by_base_bits():
+    torch.manual_seed(306)
+    query = torch.randn(1, 4, 12, 16)
+    key = torch.randn(1, 2, 12, 16)
+    value = torch.randn(1, 2, 12, 16)
+    low_cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="mse",
+        value_quantizer="bitwidth_attention_outlier_hadamard_mse",
+        outlier_hadamard_block_size=8,
+        attention_error_query_tokens=2,
+    )
+    high_cfg = make_kv_config_from_effective_bits(
+        3.5,
+        codebook_grid_size=10_001,
+        key_quantizer="mse",
+        value_quantizer="bitwidth_attention_outlier_hadamard_mse",
+        outlier_hadamard_block_size=8,
+        attention_error_query_tokens=2,
+    )
+    low_cache = TurboQuantDynamicCache(low_cfg)
+    high_cache = TurboQuantDynamicCache(high_cfg)
+
+    low_cache.update(key, value, layer_idx=0, cache_kwargs={"query_states": query, "scaling": 16**-0.5})
+    high_cache.update(key, value, layer_idx=0, cache_kwargs={"query_states": query, "scaling": 16**-0.5})
+
+    assert isinstance(low_cache.value_cache[0][0], OutlierMSESegment)
+    assert isinstance(high_cache.value_cache[0][0], (OutlierMSESegment, PackedMSESegment))
+    assert low_cache.compression_summary()["avg_effective_index_bits"] == 2.5
+    assert high_cache.compression_summary()["avg_effective_index_bits"] == 3.5
+
+
+def test_entropy_guarded_outlier_hadamard_uses_attention_entropy_gate():
+    torch.manual_seed(307)
+    query = torch.randn(1, 4, 12, 16)
+    key = torch.randn(1, 2, 12, 16)
+    value = torch.randn(1, 2, 12, 16)
+    active_cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="mse",
+        value_quantizer="entropy_guarded_outlier_hadamard_mse",
+        outlier_hadamard_block_size=8,
+        attention_error_query_tokens=2,
+        attention_entropy_threshold=1.0,
+    )
+    inactive_cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="mse",
+        value_quantizer="entropy_guarded_outlier_hadamard_mse",
+        outlier_hadamard_block_size=8,
+        attention_error_query_tokens=2,
+        attention_entropy_threshold=0.0,
+    )
+    active_cache = TurboQuantDynamicCache(active_cfg)
+    inactive_cache = TurboQuantDynamicCache(inactive_cfg)
+
+    active_cache.update(key, value, layer_idx=0, cache_kwargs={"query_states": query, "scaling": 16**-0.5})
+    inactive_cache.update(key, value, layer_idx=0, cache_kwargs={"query_states": query, "scaling": 16**-0.5})
+
+    active_segment = active_cache.value_cache[0][0]
+    inactive_segment = inactive_cache.value_cache[0][0]
+    assert isinstance(active_segment, OutlierMSESegment)
+    assert isinstance(active_segment.regular, OutlierHadamardSegment)
+    assert isinstance(inactive_segment, OutlierMSESegment)
+    assert isinstance(inactive_segment.regular, PackedMSESegment)
+    assert active_cache.compression_summary()["avg_effective_index_bits"] == 2.5
+    assert inactive_cache.compression_summary()["avg_effective_index_bits"] == 2.5
+
+
+def test_rms_rotation_mse_applies_segment_preconditioning():
+    torch.manual_seed(22)
+    cfg = make_kv_config_from_effective_bits(
+        2,
+        codebook_grid_size=10_001,
+        key_quantizer="rms_rotation_mse",
+        value_quantizer="rms_rotation_mse",
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    channel_scale = torch.linspace(0.5, 3.0, 16).view(1, 1, 1, 16)
+    key = torch.randn(1, 2, 12, 16) * channel_scale
+    value = torch.randn(1, 2, 12, 16) * channel_scale
+
+    out_key, out_value = cache.update(key, value, layer_idx=0)
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    key_segment = cache.key_cache[0][0]
+    assert isinstance(key_segment, RmsScaledSegment)
+    assert isinstance(key_segment.residual, PackedMSESegment)
+    assert key_segment.scales.shape == (16,)
+    assert torch.std(key_segment.scales.to(torch.float32)) > 0
+    assert cache.storage_nbytes() < cache.materialized_nbytes()
+
+
+def test_rms_regular_gain_mse_combines_preconditioning_and_regular_gain():
+    torch.manual_seed(23)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="rms_regular_gain_mse",
+        value_quantizer="rms_regular_gain_mse",
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 12, 16)
+    value = torch.randn(1, 2, 12, 16)
+
+    out_key, out_value = cache.update(key, value, layer_idx=0)
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    key_segment = cache.key_cache[0][0]
+    assert isinstance(key_segment, OutlierMSESegment)
+    assert isinstance(key_segment.regular, RmsScaledSegment)
+    assert isinstance(key_segment.outlier, RmsScaledSegment)
+    assert isinstance(key_segment.regular.residual, PackedMSESegment)
+    assert key_segment.regular.residual.quantizer_kind == "gain_mse"
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.5
+
+
+def test_head_rotation_mse_uses_independent_head_segments_for_fractional_bits():
+    torch.manual_seed(34)
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="head_rotation_mse",
+        value_quantizer="head_rotation_mse",
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 8, 16)
+    value = torch.randn(1, 2, 8, 16)
+
+    out_key, out_value = cache.update(key, value, layer_idx=0)
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    key_segment = cache.key_cache[0][0]
+    value_segment = cache.value_cache[0][0]
+    assert isinstance(key_segment, HeadRotationMSESegment)
+    assert isinstance(value_segment, HeadRotationMSESegment)
+    assert len(key_segment.head_segments) == 2
+    assert len(value_segment.head_segments) == 2
+    assert all(isinstance(segment, OutlierMSESegment) for segment in key_segment.head_segments)
+    assert all(isinstance(segment, OutlierMSESegment) for segment in value_segment.head_segments)
+    assert cache.compression_summary()["avg_effective_index_bits"] == 2.5
+    assert cache.storage_nbytes() < cache.materialized_nbytes()
+
+
+def test_calibrated_rotated_outlier_mse_uses_fractional_full_rotation():
+    torch.manual_seed(35)
+    transform = torch.eye(16).tolist()
+    cfg = make_kv_config_from_effective_bits(
+        2.5,
+        codebook_grid_size=10_001,
+        key_quantizer="calibrated_rotated_outlier_mse",
+        value_quantizer="calibrated_rotated_outlier_mse",
+        layer_key_rotation_matrices=(tuple(tuple(row) for row in transform),),
+        layer_value_rotation_matrices=(tuple(tuple(row) for row in transform),),
+    )
+    cache = TurboQuantDynamicCache(cfg)
+    key = torch.randn(1, 2, 8, 16)
+    value = torch.randn(1, 2, 8, 16)
+
+    out_key, out_value = cache.update(key, value, layer_idx=0)
+
+    assert out_key.shape == key.shape
+    assert out_value.shape == value.shape
+    key_segment = cache.key_cache[0][0]
+    assert isinstance(key_segment, RotatedOutlierMSESegment)
+    assert key_segment.quantizer_kind == "calibrated_rotated_outlier_mse"
+    summary = cache.compression_summary()
+    assert summary["avg_effective_index_bits"] == 2.5
+    assert summary["layer_key_rotation_matrices"] is True
 
 
 def test_token_protection_keeps_budgeted_raw_tokens():

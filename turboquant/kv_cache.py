@@ -20,6 +20,7 @@ from .core import (
     TurboQuantMSE,
     TurboQuantProd,
     hadamard_orthogonal,
+    random_orthogonal,
 )
 
 QUANTIZER_KINDS = {
@@ -32,6 +33,8 @@ QUANTIZER_KINDS = {
     "regular_half_gain_mse",
     "regular_selected_gain_mse",
     "regular_clipped_gain_mse",
+    "adaptive_regular_gain_mse",
+    "attention_adaptive_regular_gain_mse",
     "clipped_gain_mse",
     "selected_gain_mse",
     "lowbit_gain_mse",
@@ -40,9 +43,44 @@ QUANTIZER_KINDS = {
     "lowbit_selected_gain_mse",
     "dot_gain_mse",
     "hadamard_mse",
+    "srht_mse",
+    "calibrated_rotation_mse",
+    "head_rotation_mse",
+    "head_hadamard_mse",
+    "outlier_hadamard_mse",
+    "attention_adaptive_outlier_hadamard_mse",
+    "attention_outlier_hadamard_mse",
+    "bitwidth_attention_outlier_hadamard_mse",
+    "entropy_guarded_outlier_hadamard_mse",
+    "adaptive_outlier_hadamard_mse",
+    "vector_adaptive_outlier_hadamard_mse",
+    "margin_vector_outlier_hadamard_mse",
+    "hadamard_residual_mse",
+    "attention_hadamard_residual_mse",
+    "attention_weighted_hadamard_residual_mse",
+    "regular_outlier_hadamard_mse",
+    "outlier_only_hadamard_mse",
+    "attention_scale_mse",
+    "regular_attention_scale_mse",
+    "rotation_bank_mse",
+    "attention_rotation_bank_mse",
+    "segment_rotation_bank_mse",
+    "rotated_outlier_mse",
+    "attention_rotated_outlier_mse",
+    "attention_adaptive_rotated_outlier_mse",
+    "attention_adaptive_paired_rotated_outlier_mse",
+    "entropy_guarded_paired_rotated_outlier_mse",
+    "calibrated_rotated_outlier_mse",
+    "paired_rotated_outlier_mse",
+    "shared_rotated_outlier_mse",
+    "rms_rotation_mse",
+    "rms_regular_gain_mse",
     "centered_mse",
     "auto_mse",
     "attention_auto_mse",
+    "distortion_regime_mse",
+    "gain_unit_regime_mse",
+    "rate_regime_mse",
     "prod",
     "mse_block2",
     "learned_mse_block2",
@@ -84,8 +122,12 @@ class KVQuantConfig:
     layer_value_quantizers: tuple[str, ...] | None = None
     layer_key_bits: tuple[float, ...] | None = None
     layer_value_bits: tuple[float, ...] | None = None
+    layer_key_rotation_indices: tuple[int, ...] | None = None
+    layer_value_rotation_indices: tuple[int, ...] | None = None
     layer_key_channel_scores: tuple[tuple[float, ...], ...] | None = None
     layer_value_channel_scores: tuple[tuple[float, ...], ...] | None = None
+    layer_key_rotation_matrices: tuple[tuple[tuple[float, ...], ...], ...] | None = None
+    layer_value_rotation_matrices: tuple[tuple[tuple[float, ...], ...], ...] | None = None
     sensitivity_score_power: float = 1.0
     token_protection_policy: str = "none"
     protected_start_tokens: int = 4
@@ -93,6 +135,10 @@ class KVQuantConfig:
     token_protection_target_ratio: float | None = None
     token_protection_targets: str = "both"
     attention_error_query_tokens: int = 1
+    attention_entropy_threshold: float = 0.80
+    rotation_bank_size: int = 4
+    rotation_bank_seed_stride: int = 100_003
+    outlier_hadamard_block_size: int = 16
 
     def __post_init__(self) -> None:
         if self.key_quantizer not in QUANTIZER_KINDS:
@@ -123,10 +169,26 @@ class KVQuantConfig:
             raise ValueError("layer_key_bits must be non-empty when provided")
         if self.layer_value_bits is not None and not self.layer_value_bits:
             raise ValueError("layer_value_bits must be non-empty when provided")
+        if self.layer_key_rotation_indices is not None and not self.layer_key_rotation_indices:
+            raise ValueError("layer_key_rotation_indices must be non-empty when provided")
+        if self.layer_value_rotation_indices is not None and not self.layer_value_rotation_indices:
+            raise ValueError("layer_value_rotation_indices must be non-empty when provided")
+        for name, schedule in (
+            ("layer_key_rotation_indices", self.layer_key_rotation_indices),
+            ("layer_value_rotation_indices", self.layer_value_rotation_indices),
+        ):
+            if schedule is not None:
+                for rotation_idx in schedule:
+                    if rotation_idx < 0 or rotation_idx > 255:
+                        raise ValueError(f"{name} values must be in [0, 255]")
         if self.layer_key_channel_scores is not None and not self.layer_key_channel_scores:
             raise ValueError("layer_key_channel_scores must be non-empty when provided")
         if self.layer_value_channel_scores is not None and not self.layer_value_channel_scores:
             raise ValueError("layer_value_channel_scores must be non-empty when provided")
+        if self.layer_key_rotation_matrices is not None and not self.layer_key_rotation_matrices:
+            raise ValueError("layer_key_rotation_matrices must be non-empty when provided")
+        if self.layer_value_rotation_matrices is not None and not self.layer_value_rotation_matrices:
+            raise ValueError("layer_value_rotation_matrices must be non-empty when provided")
         if self.sensitivity_score_power < 0:
             raise ValueError("sensitivity_score_power must be non-negative")
         if self.token_protection_policy not in TOKEN_PROTECTION_POLICIES:
@@ -141,6 +203,14 @@ class KVQuantConfig:
             raise ValueError("token_protection_target_ratio must be positive when provided")
         if self.attention_error_query_tokens <= 0:
             raise ValueError("attention_error_query_tokens must be positive")
+        if not 0.0 <= self.attention_entropy_threshold <= 1.0:
+            raise ValueError("attention_entropy_threshold must be in [0, 1]")
+        if self.rotation_bank_size <= 0 or self.rotation_bank_size > 256:
+            raise ValueError("rotation_bank_size must be in [1, 256]")
+        if self.rotation_bank_seed_stride <= 0:
+            raise ValueError("rotation_bank_seed_stride must be positive")
+        if self.outlier_hadamard_block_size <= 0 or self.outlier_hadamard_block_size > 256:
+            raise ValueError("outlier_hadamard_block_size must be in [1, 256]")
 
 
 @dataclass
@@ -154,6 +224,9 @@ class PackedMSESegment:
     dtype: torch.dtype
     block_size: int = 1
     quantizer_kind: str = "mse"
+    packed_rotation_ids: torch.Tensor | None = None
+    rotation_id_bits: int | None = None
+    rotation_bank_size: int | None = None
 
     @property
     def sequence_length(self) -> int:
@@ -167,7 +240,14 @@ class PackedMSESegment:
 
     @property
     def nbytes(self) -> int:
-        return self.packed_indices.numel() * self.packed_indices.element_size() + self.norms.numel() * self.norms.element_size()
+        rotation_nbytes = (
+            0 if self.packed_rotation_ids is None else self.packed_rotation_ids.numel() * self.packed_rotation_ids.element_size()
+        )
+        return (
+            self.packed_indices.numel() * self.packed_indices.element_size()
+            + self.norms.numel() * self.norms.element_size()
+            + rotation_nbytes
+        )
 
 
 @dataclass
@@ -236,6 +316,146 @@ class CenteredSegment:
 
 
 @dataclass
+class OutlierHadamardSegment:
+    """Packed segment using a data-dependent permutation plus block-Hadamard rotation."""
+
+    packed_indices: torch.Tensor
+    norms: torch.Tensor
+    permutation: torch.Tensor
+    signs: torch.Tensor
+    shape: tuple[int, ...]
+    bits: int
+    dtype: torch.dtype
+    block_size: int
+    quantizer_kind: str = "outlier_hadamard_mse"
+
+    @property
+    def sequence_length(self) -> int:
+        return self.shape[-2]
+
+    @property
+    def nbytes(self) -> int:
+        return (
+            self.packed_indices.numel() * self.packed_indices.element_size()
+            + self.norms.numel() * self.norms.element_size()
+            + self.permutation.numel() * self.permutation.element_size()
+            + self.signs.numel() * self.signs.element_size()
+        )
+
+
+@dataclass
+class RmsScaledSegment:
+    """Segment that applies per-channel RMS preconditioning before TurboQuant."""
+
+    scales: torch.Tensor
+    residual: CacheSegment
+    shape: tuple[int, ...]
+    dtype: torch.dtype
+    bits: int
+
+    @property
+    def sequence_length(self) -> int:
+        return self.shape[-2]
+
+    @property
+    def nbytes(self) -> int:
+        return self.scales.numel() * self.scales.element_size() + self.residual.nbytes
+
+
+@dataclass
+class VectorAdaptiveRotationSegment:
+    """Per-vector mixture of baseline TurboQuant and an alternate rotation path."""
+
+    baseline: CacheSegment
+    candidate: CacheSegment
+    packed_candidate_mask: torch.Tensor
+    selector_shape: tuple[int, ...]
+    shape: tuple[int, ...]
+    dtype: torch.dtype
+    bits: int
+    candidate_kind: str
+
+    @property
+    def sequence_length(self) -> int:
+        return self.shape[-2]
+
+    @property
+    def nbytes(self) -> int:
+        return self.baseline.nbytes + self.candidate.nbytes + self.packed_candidate_mask.numel() * self.packed_candidate_mask.element_size()
+
+
+@dataclass
+class HeadRotationMSESegment:
+    """Packed TurboQuant segment using a deterministic independent rotation per KV head."""
+
+    head_segments: tuple[CacheSegment, ...]
+    shape: tuple[int, ...]
+    dtype: torch.dtype
+    bits: float
+
+    @property
+    def sequence_length(self) -> int:
+        return self.shape[-2]
+
+    @property
+    def nbytes(self) -> int:
+        return sum(segment.nbytes for segment in self.head_segments)
+
+
+@dataclass
+class HeadHadamardSegment:
+    """Segment quantized after an orthogonal Hadamard mix across KV heads."""
+
+    residual: CacheSegment
+    shape: tuple[int, ...]
+    dtype: torch.dtype
+    bits: float
+
+    @property
+    def sequence_length(self) -> int:
+        return self.shape[-2]
+
+    @property
+    def nbytes(self) -> int:
+        return self.residual.nbytes
+
+
+@dataclass
+class HadamardResidualSegment:
+    """Low-bit TurboQuant plus sparse Hadamard residual-sign correction."""
+
+    base: CacheSegment
+    packed_residual_signs: torch.Tensor
+    residual_scales: torch.Tensor
+    residual_indices: torch.Tensor
+    shape: tuple[int, ...]
+    dtype: torch.dtype
+    base_bits: int
+    requested_bits: float
+
+    @property
+    def sequence_length(self) -> int:
+        return self.shape[-2]
+
+    @property
+    def bits(self) -> float:
+        return float(self.requested_bits)
+
+    @property
+    def nbytes(self) -> int:
+        return (
+            self.base.nbytes
+            + self.packed_residual_signs.numel() * self.packed_residual_signs.element_size()
+            + self.residual_scales.numel() * self.residual_scales.element_size()
+            + self.residual_indices.numel() * self.residual_indices.element_size()
+        )
+
+    @property
+    def effective_index_bits(self) -> float:
+        return float(self.base_bits) + float(self.residual_indices.numel()) / float(self.shape[-1])
+
+
+@dataclass
 class OutlierMSESegment:
     """Two-part packed TurboQuantMSE segment for non-integer effective bits."""
 
@@ -274,6 +494,50 @@ class OutlierMSESegment:
         dimension = self.shape[-1]
         return (
             self.regular_indices.numel() * self.regular.bits + self.outlier_indices.numel() * self.outlier.bits
+        ) / dimension
+
+
+@dataclass
+class RotatedOutlierMSESegment:
+    """Fractional-bit TurboQuant segment with high-bit coordinates selected after rotation."""
+
+    packed_regular_indices: torch.Tensor
+    regular_norms: torch.Tensor
+    packed_outlier_indices: torch.Tensor
+    outlier_norms: torch.Tensor
+    regular_indices: torch.Tensor
+    outlier_indices: torch.Tensor
+    shape: tuple[int, ...]
+    dtype: torch.dtype
+    regular_bits: int
+    outlier_bits: int
+    requested_bits: float
+    quantizer_kind: str = "rotated_outlier_mse"
+
+    @property
+    def sequence_length(self) -> int:
+        return self.shape[-2]
+
+    @property
+    def bits(self) -> float:
+        return float(self.requested_bits)
+
+    @property
+    def nbytes(self) -> int:
+        return (
+            self.packed_regular_indices.numel() * self.packed_regular_indices.element_size()
+            + self.regular_norms.numel() * self.regular_norms.element_size()
+            + self.packed_outlier_indices.numel() * self.packed_outlier_indices.element_size()
+            + self.outlier_norms.numel() * self.outlier_norms.element_size()
+            + self.regular_indices.numel() * self.regular_indices.element_size()
+            + self.outlier_indices.numel() * self.outlier_indices.element_size()
+        )
+
+    @property
+    def effective_index_bits(self) -> float:
+        dimension = self.shape[-1]
+        return (
+            self.regular_indices.numel() * self.regular_bits + self.outlier_indices.numel() * self.outlier_bits
         ) / dimension
 
 
@@ -359,7 +623,14 @@ CacheSegment = (
     | PackedProdSegment
     | UniformAffineSegment
     | CenteredSegment
+    | OutlierHadamardSegment
+    | RmsScaledSegment
+    | VectorAdaptiveRotationSegment
+    | HeadRotationMSESegment
+    | HeadHadamardSegment
+    | HadamardResidualSegment
     | OutlierMSESegment
+    | RotatedOutlierMSESegment
     | HeadAdaptiveOutlierMSESegment
     | RawTensorSegment
     | TokenProtectedSegment
@@ -472,6 +743,20 @@ class TurboQuantDynamicCache(Cache):
             self._materialized_key_cache.append(None)
             self._materialized_value_cache.append(None)
 
+    @staticmethod
+    def _srht_rotation_matrix(
+        dimension: int,
+        *,
+        device: torch.device,
+        dtype: torch.dtype,
+        seed: int,
+    ) -> torch.Tensor:
+        transform = hadamard_orthogonal(dimension, device=device, dtype=dtype, seed=seed)
+        gen = torch.Generator(device=device)
+        gen.manual_seed(seed + 31_337)
+        permutation = torch.randperm(dimension, generator=gen, device=device)
+        return transform.index_select(0, permutation)
+
     def _get_quantizer(
         self,
         *,
@@ -482,12 +767,29 @@ class TurboQuantDynamicCache(Cache):
         layer_idx: int,
         device: torch.device,
         dtype: torch.dtype,
+        rotation_bank_index: int = 0,
     ) -> TurboQuantMSE | TurboQuantProd | TurboQuantBlockMSE | TurboQuantLearnedBlockMSE:
         device_index = device.index if device.index is not None else -1
-        key = (quantizer_kind, name, dimension, dtype, bits, layer_idx, device.type, device_index)
+        is_rotation_bank = quantizer_kind in {
+            "rotation_bank_mse",
+            "attention_rotation_bank_mse",
+            "segment_rotation_bank_mse",
+        }
+        configured_rotation_idx = self._configured_rotation_index(layer_idx, name)
+        effective_rotation_idx = rotation_bank_index if is_rotation_bank else configured_rotation_idx
+        head_rotation_idx = self._head_rotation_index(name)
+        key_name = f"{name}:rot{effective_rotation_idx}" if (is_rotation_bank or effective_rotation_idx) else name
+        key = (quantizer_kind, key_name, dimension, dtype, bits, layer_idx, device.type, device_index)
         quantizer = self._quantizers.get(key)
         if quantizer is None:
-            seed = self.config.seed + 1_000 * layer_idx + (0 if name == "key" else 500)
+            side_seed_offset = 0 if name == "key" or name.startswith("key_head") else 500
+            seed = (
+                self.config.seed
+                + 1_000 * layer_idx
+                + side_seed_offset
+                + self.config.rotation_bank_seed_stride * effective_rotation_idx
+                + self.config.rotation_bank_seed_stride * head_rotation_idx
+            )
             if quantizer_kind == "prod":
                 quantizer = TurboQuantProd(
                     dimension,
@@ -529,7 +831,8 @@ class TurboQuantDynamicCache(Cache):
                     transform_matrix=transform,
                     inverse_transform_matrix=transform.T,
                 )
-            else:
+            elif quantizer_kind == "srht_mse":
+                transform = self._srht_rotation_matrix(dimension, device=device, dtype=dtype, seed=seed)
                 quantizer = TurboQuantMSE(
                     dimension,
                     bits,
@@ -537,32 +840,56 @@ class TurboQuantDynamicCache(Cache):
                     device=device,
                     dtype=dtype,
                     codebook_grid_size=self.config.codebook_grid_size,
-                    project_unit_norm=quantizer_kind in {"unit_mse", "lsq_unit_mse"},
+                    transform_matrix=transform,
+                    inverse_transform_matrix=transform.T,
+                )
+            elif quantizer_kind == "calibrated_rotation_mse":
+                transform = self._calibrated_rotation_matrix(layer_idx, name, dimension, device, dtype)
+                quantizer = TurboQuantMSE(
+                    dimension,
+                    bits,
+                    seed=seed,
+                    device=device,
+                    dtype=dtype,
+                    codebook_grid_size=self.config.codebook_grid_size,
+                    transform_matrix=transform,
+                    inverse_transform_matrix=transform.T,
+                )
+            else:
+                base_quantizer_kind = "mse" if is_rotation_bank else quantizer_kind
+                quantizer = TurboQuantMSE(
+                    dimension,
+                    bits,
+                    seed=seed,
+                    device=device,
+                    dtype=dtype,
+                    codebook_grid_size=self.config.codebook_grid_size,
+                    project_unit_norm=base_quantizer_kind in {"unit_mse", "lsq_unit_mse"},
                     reconstruction_scale=(
                         "lsq"
-                        if quantizer_kind in {"lsq_mse", "lsq_unit_mse"}
+                        if base_quantizer_kind in {"lsq_mse", "lsq_unit_mse"}
                         else "norm_gain"
-                        if quantizer_kind == "gain_mse"
+                        if base_quantizer_kind == "gain_mse"
                         else "norm_gain"
-                        if quantizer_kind == "regular_gain_mse"
+                        if base_quantizer_kind == "regular_gain_mse"
                         else "half_gain"
-                        if quantizer_kind == "regular_half_gain_mse"
+                        if base_quantizer_kind == "regular_half_gain_mse"
                         else "clipped_gain"
-                        if quantizer_kind == "regular_clipped_gain_mse"
+                        if base_quantizer_kind == "regular_clipped_gain_mse"
                         else "clipped_gain"
-                        if quantizer_kind == "clipped_gain_mse"
+                        if base_quantizer_kind == "clipped_gain_mse"
                         else "selected_gain"
-                        if quantizer_kind == "selected_gain_mse"
+                        if base_quantizer_kind == "selected_gain_mse"
                         else "norm_gain"
-                        if quantizer_kind == "lowbit_gain_mse" and bits <= 2
+                        if base_quantizer_kind == "lowbit_gain_mse" and bits <= 2
                         else "half_gain"
-                        if quantizer_kind == "lowbit_half_gain_mse" and bits <= 2
+                        if base_quantizer_kind == "lowbit_half_gain_mse" and bits <= 2
                         else "clipped_gain"
-                        if quantizer_kind == "lowbit_clipped_gain_mse" and bits <= 2
+                        if base_quantizer_kind == "lowbit_clipped_gain_mse" and bits <= 2
                         else "selected_gain"
-                        if quantizer_kind == "lowbit_selected_gain_mse" and bits <= 2
+                        if base_quantizer_kind == "lowbit_selected_gain_mse" and bits <= 2
                         else "dot_gain"
-                        if quantizer_kind == "dot_gain_mse"
+                        if base_quantizer_kind == "dot_gain_mse"
                         else "norm"
                     ),
                 )
@@ -577,9 +904,80 @@ class TurboQuantDynamicCache(Cache):
         name: str,
         quantizer_kind: str,
         layer_idx: int,
+        query_states: torch.Tensor | None = None,
+        key_states_for_attention: torch.Tensor | None = None,
+        scaling: float = 1.0,
     ) -> CacheSegment:
         if bits >= 16:
             return RawTensorSegment(tensor=states.detach())
+        if quantizer_kind == "distortion_regime_mse":
+            return self._quantize_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind="gain_mse" if bits <= 2 else "learned_unit_mse_block2",
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "gain_unit_regime_mse":
+            return self._quantize_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind="gain_mse" if bits <= 2 else "unit_mse",
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "rate_regime_mse":
+            return self._quantize_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind="gain_mse" if bits <= 2 else "learned_unit_mse_block2",
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "rms_rotation_mse":
+            if states.shape[-2] <= 1:
+                return self._quantize_to_segment(
+                    states,
+                    bits=bits,
+                    name=f"{name}_rms_base",
+                    quantizer_kind="mse",
+                    layer_idx=layer_idx,
+                )
+            rms = states.detach().to(dtype=torch.float32).square().mean(dim=tuple(range(states.ndim - 1))).sqrt()
+            rms = rms.clamp_min(torch.finfo(torch.float32).eps)
+            geo = torch.exp(torch.log(rms).mean()).clamp_min(torch.finfo(torch.float32).eps)
+            scales = (rms / geo).to(device=states.device, dtype=states.dtype)
+            conditioned = states / scales
+            residual_segment = self._quantize_to_segment(
+                conditioned,
+                bits=bits,
+                name=f"{name}_rms",
+                quantizer_kind="mse",
+                layer_idx=layer_idx,
+            )
+            return RmsScaledSegment(
+                scales=scales.detach(),
+                residual=residual_segment,
+                shape=tuple(states.shape),
+                dtype=states.dtype,
+                bits=bits,
+            )
+        if quantizer_kind == "head_rotation_mse":
+            return self._quantize_head_rotation_effective_to_segment(
+                states,
+                bits=float(bits),
+                name=name,
+                layer_idx=layer_idx,
+            )
         if quantizer_kind == "centered_mse":
             center = states.detach().mean(dim=-2, keepdim=True)
             residual = states - center
@@ -597,6 +995,15 @@ class TurboQuantDynamicCache(Cache):
                 dtype=states.dtype,
                 bits=bits,
             )
+        if quantizer_kind == "attention_scale_mse":
+            return self._quantize_attention_scale_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                query_states=query_states,
+                scaling=scaling,
+            )
         if quantizer_kind in {"uniform_token", "uniform_channel"}:
             return self._quantize_uniform_to_segment(
                 states,
@@ -609,6 +1016,56 @@ class TurboQuantDynamicCache(Cache):
                 bits=bits,
                 name=name,
                 layer_idx=layer_idx,
+            )
+        if quantizer_kind in {"rotation_bank_mse", "attention_rotation_bank_mse"}:
+            return self._quantize_rotation_bank_mse_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                attention_aware=quantizer_kind == "attention_rotation_bank_mse",
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "outlier_hadamard_mse":
+            return self._quantize_outlier_hadamard_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+            )
+        if quantizer_kind == "attention_adaptive_outlier_hadamard_mse":
+            return self._quantize_attention_adaptive_outlier_hadamard_effective_to_segment(
+                states,
+                bits=float(bits),
+                name=name,
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "adaptive_outlier_hadamard_mse":
+            return self._quantize_adaptive_outlier_hadamard_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+            )
+        if quantizer_kind == "vector_adaptive_outlier_hadamard_mse":
+            return self._quantize_vector_adaptive_outlier_hadamard_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+            )
+        if quantizer_kind == "margin_vector_outlier_hadamard_mse":
+            return self._quantize_vector_adaptive_outlier_hadamard_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                activation_margin=0.95,
             )
         original_shape = tuple(states.shape)
         dimension = original_shape[-1]
@@ -1525,6 +1982,19 @@ class TurboQuantDynamicCache(Cache):
         key_states_for_attention: torch.Tensor | None = None,
         scaling: float = 1.0,
     ) -> CacheSegment:
+        if quantizer_kind == "rate_regime_mse":
+            return self._quantize_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind="gain_mse" if bits < 3.0 else "learned_unit_mse_block2",
+                layer_idx=layer_idx,
+                allow_token_protection=allow_token_protection,
+                token_scores=token_scores,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
         target_enabled = self.config.token_protection_targets == "both" or self.config.token_protection_targets == name
         if (
             allow_token_protection
@@ -1549,6 +2019,228 @@ class TurboQuantDynamicCache(Cache):
                 key_states_for_attention=key_states_for_attention,
                 scaling=scaling,
             )
+        if quantizer_kind == "attention_rotation_bank_mse":
+            if query_states is not None and key_states_for_attention is not None:
+                return self._quantize_attention_rotation_bank_effective_to_segment(
+                    states,
+                    bits=bits,
+                    name=name,
+                    layer_idx=layer_idx,
+                    query_states=query_states,
+                    key_states_for_attention=key_states_for_attention,
+                    scaling=scaling,
+            )
+            quantizer_kind = "rotation_bank_mse"
+        if quantizer_kind == "segment_rotation_bank_mse":
+            return self._quantize_segment_rotation_bank_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+            )
+        if quantizer_kind == "head_hadamard_mse":
+            return self._quantize_head_hadamard_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+            )
+        if quantizer_kind == "attention_outlier_hadamard_mse":
+            return self._quantize_attention_outlier_hadamard_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "attention_adaptive_outlier_hadamard_mse":
+            return self._quantize_attention_adaptive_outlier_hadamard_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "bitwidth_attention_outlier_hadamard_mse":
+            regular_bits, _, _ = self._resolve_effective_bit_allocation(bits, states.shape[-1])
+            if regular_bits <= 2:
+                return self._quantize_effective_to_segment(
+                    states,
+                    bits=bits,
+                    name=name,
+                    quantizer_kind="outlier_hadamard_mse",
+                    layer_idx=layer_idx,
+                    allow_token_protection=False,
+                    query_states=query_states,
+                    key_states_for_attention=key_states_for_attention,
+                    scaling=scaling,
+                )
+            return self._quantize_attention_outlier_hadamard_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "entropy_guarded_outlier_hadamard_mse":
+            return self._quantize_entropy_guarded_outlier_hadamard_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "hadamard_residual_mse":
+            return self._quantize_hadamard_residual_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+            )
+        if quantizer_kind == "attention_hadamard_residual_mse":
+            return self._quantize_attention_hadamard_residual_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "attention_weighted_hadamard_residual_mse":
+            return self._quantize_attention_weighted_hadamard_residual_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "attention_adaptive_rotated_outlier_mse":
+            return self._quantize_attention_adaptive_rotated_outlier_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "attention_adaptive_paired_rotated_outlier_mse":
+            return self._quantize_attention_adaptive_rotated_outlier_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+                segment_quantizer_kind="attention_adaptive_paired_rotated_outlier_mse",
+                quantizer_name="key",
+            )
+        if quantizer_kind == "entropy_guarded_paired_rotated_outlier_mse":
+            return self._quantize_entropy_guarded_paired_rotated_outlier_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind in {
+            "rotated_outlier_mse",
+            "attention_rotated_outlier_mse",
+            "calibrated_rotated_outlier_mse",
+            "paired_rotated_outlier_mse",
+            "shared_rotated_outlier_mse",
+        }:
+            return self._quantize_rotated_outlier_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                base_quantizer_kind=(
+                    "calibrated_rotation_mse" if quantizer_kind == "calibrated_rotated_outlier_mse" else "mse"
+                ),
+                segment_quantizer_kind=quantizer_kind,
+                quantizer_name=(
+                    "key"
+                    if quantizer_kind in {"paired_rotated_outlier_mse", "shared_rotated_outlier_mse"}
+                    else None
+                ),
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+                attention_aware=quantizer_kind == "attention_rotated_outlier_mse",
+            )
+        if quantizer_kind == "regular_outlier_hadamard_mse":
+            return self._quantize_regular_outlier_hadamard_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+            )
+        if quantizer_kind == "outlier_only_hadamard_mse":
+            return self._quantize_outlier_only_hadamard_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+            )
+        if quantizer_kind == "regular_attention_scale_mse":
+            return self._quantize_regular_attention_scale_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "adaptive_regular_gain_mse":
+            return self._quantize_adaptive_regular_gain_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "attention_adaptive_regular_gain_mse":
+            return self._quantize_attention_adaptive_regular_gain_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        if quantizer_kind == "rms_regular_gain_mse":
+            return self._quantize_rms_regular_gain_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+            )
+        if quantizer_kind == "head_rotation_mse":
+            return self._quantize_head_rotation_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+            )
         regular_bits, outlier_bits, outlier_count = self._resolve_effective_bit_allocation(bits, states.shape[-1])
         if outlier_count == 0:
             return self._quantize_to_segment(
@@ -1562,6 +2254,9 @@ class TurboQuantDynamicCache(Cache):
                     else quantizer_kind
                 ),
                 layer_idx=layer_idx,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
             )
         if self._outlier_policy_for(name) in {"head_dynamic_absmean", "head_error_gain"}:
             return self._quantize_head_adaptive_effective_to_segment(
@@ -1595,6 +2290,7 @@ class TurboQuantDynamicCache(Cache):
 
         regular_states = states.index_select(-1, regular_indices)
         outlier_states = states.index_select(-1, outlier_indices)
+        subspace_quantizer_kind = "mse" if quantizer_kind == "calibrated_rotation_mse" else quantizer_kind
         regular_segment = self._quantize_to_segment(
             regular_states,
             bits=regular_bits,
@@ -1608,7 +2304,7 @@ class TurboQuantDynamicCache(Cache):
                 if quantizer_kind == "regular_selected_gain_mse"
                 else "clipped_gain_mse"
                 if quantizer_kind == "regular_clipped_gain_mse"
-                else quantizer_kind
+                else subspace_quantizer_kind
             ),
             layer_idx=layer_idx,
         )
@@ -1620,7 +2316,7 @@ class TurboQuantDynamicCache(Cache):
                 "mse"
                 if quantizer_kind
                 in {"regular_gain_mse", "regular_half_gain_mse", "regular_selected_gain_mse", "regular_clipped_gain_mse"}
-                else quantizer_kind
+                else subspace_quantizer_kind
             ),
             layer_idx=layer_idx,
         )
@@ -1677,6 +2373,33 @@ class TurboQuantDynamicCache(Cache):
                 token_weight = probs.square().mean(dim=(2, 3))
                 return float((token_weight * value_error).mean().item())
         return float(torch.mean((states.detach().to(dtype=torch.float32) - states_hat.to(dtype=torch.float32)) ** 2).item())
+
+    def _attention_entropy_ratio(
+        self,
+        *,
+        query_states: torch.Tensor | None,
+        key_states: torch.Tensor | None,
+        scaling: float,
+        query_tokens: int = 8,
+    ) -> float | None:
+        if query_states is None or key_states is None or query_states.ndim != 4 or key_states.ndim != 4:
+            return None
+        if key_states.shape[-2] <= 1:
+            return 0.0
+        with torch.no_grad():
+            requested = min(query_tokens, query_states.shape[-2])
+            query_focus = query_states[..., -requested:, :]
+            bsz, num_query_heads, _, head_dim = query_focus.shape
+            num_key_heads = key_states.shape[1]
+            if num_query_heads % num_key_heads != 0 or head_dim != key_states.shape[-1]:
+                return None
+            groups = num_query_heads // num_key_heads
+            query_grouped = query_focus.reshape(bsz, num_key_heads, groups, requested, head_dim)
+            scores = torch.einsum("bhgqd,bhsd->bhgqs", query_grouped.to(torch.float32), key_states.to(torch.float32))
+            probs = self._causal_attention_probs(scores * float(scaling), key_len=key_states.shape[-2])
+            entropy = -(probs.clamp_min(torch.finfo(torch.float32).tiny).log() * probs).sum(dim=-1)
+            normalizer = torch.log(torch.tensor(float(key_states.shape[-2]), device=entropy.device, dtype=torch.float32))
+            return float((entropy / normalizer.clamp_min(torch.finfo(torch.float32).eps)).mean().item())
 
     def _quantize_attention_auto_mse_to_segment(
         self,
@@ -1738,6 +2461,88 @@ class TurboQuantDynamicCache(Cache):
         if isinstance(segment, CenteredSegment):
             residual = self._decode_segment(segment.residual, name=f"{name}_centered", layer_idx=layer_idx)
             return residual + segment.center.to(device=residual.device, dtype=segment.dtype)
+        if isinstance(segment, OutlierHadamardSegment):
+            dimension = segment.shape[-1]
+            base_quantizer = self._get_quantizer(
+                quantizer_kind="mse",
+                name=name,
+                dimension=dimension,
+                bits=segment.bits,
+                layer_idx=layer_idx,
+                device=segment.packed_indices.device,
+                dtype=segment.dtype,
+            )
+            if not isinstance(base_quantizer, TurboQuantMSE):
+                raise TypeError("outlier_hadamard_mse expects TurboQuantMSE codebooks")
+            code_indices = unpack_indices(segment.packed_indices, bits=segment.bits, shape=segment.shape).reshape(-1, dimension)
+            transformed_hat = base_quantizer.centroids[code_indices.to(device=segment.packed_indices.device, dtype=torch.long)]
+            signs = segment.signs.to(device=segment.packed_indices.device)
+            signs = torch.where(signs > 0, 1.0, -1.0).to(dtype=segment.dtype)
+            unpermuted_unit = self._inverse_outlier_hadamard_transform(
+                transformed_hat.to(dtype=segment.dtype),
+                permutation=segment.permutation.to(device=segment.packed_indices.device, dtype=torch.long),
+                signs=signs,
+                block_size=segment.block_size,
+            )
+            norms = segment.norms.reshape(-1).to(device=unpermuted_unit.device, dtype=segment.dtype)
+            return (unpermuted_unit * norms.unsqueeze(-1)).reshape(segment.shape)
+        if isinstance(segment, RmsScaledSegment):
+            residual = self._decode_segment(segment.residual, name=f"{name}_rms", layer_idx=layer_idx)
+            return residual * segment.scales.to(device=residual.device, dtype=segment.dtype)
+        if isinstance(segment, VectorAdaptiveRotationSegment):
+            baseline_hat = self._decode_segment(segment.baseline, name=f"{name}_vector_baseline", layer_idx=layer_idx)
+            candidate_hat = self._decode_segment(segment.candidate, name=f"{name}_vector_candidate", layer_idx=layer_idx)
+            mask = unpack_indices(
+                segment.packed_candidate_mask,
+                bits=1,
+                shape=segment.selector_shape,
+            ).reshape(-1).to(device=baseline_hat.device, dtype=torch.bool)
+            dimension = segment.shape[-1]
+            output = torch.empty((_numel(segment.shape[:-1]), dimension), device=baseline_hat.device, dtype=segment.dtype)
+            output[~mask] = baseline_hat.reshape(-1, dimension)
+            output[mask] = candidate_hat.reshape(-1, dimension)
+            return output.reshape(segment.shape)
+        if isinstance(segment, HeadRotationMSESegment):
+            head_outputs = [
+                self._decode_segment(head_segment, name=f"{name}_head{head_idx}", layer_idx=layer_idx).unsqueeze(-3)
+                for head_idx, head_segment in enumerate(segment.head_segments)
+            ]
+            return torch.cat(head_outputs, dim=-3).reshape(segment.shape)
+        if isinstance(segment, HeadHadamardSegment):
+            transformed_hat = self._decode_segment(segment.residual, name=f"{name}_head_hadamard", layer_idx=layer_idx)
+            return self._inverse_head_hadamard_transform(transformed_hat, name=name, layer_idx=layer_idx).reshape(segment.shape)
+        if isinstance(segment, HadamardResidualSegment):
+            base_hat = self._decode_segment(segment.base, name=f"{name}_hadamard_residual_base", layer_idx=layer_idx)
+            dimension = segment.shape[-1]
+            residual_count = int(segment.residual_indices.numel())
+            if residual_count == 0:
+                return base_hat.reshape(segment.shape)
+            encoded = unpack_indices(
+                segment.packed_residual_signs,
+                bits=1,
+                shape=(*segment.shape[:-1], residual_count),
+            ).reshape(-1, residual_count)
+            signs = torch.where(encoded.to(device=base_hat.device) > 0, 1.0, -1.0).to(dtype=segment.dtype)
+            coeffs = torch.zeros(
+                (_numel(segment.shape[:-1]), dimension),
+                device=base_hat.device,
+                dtype=segment.dtype,
+            )
+            scales = segment.residual_scales.reshape(-1, 1).to(device=base_hat.device, dtype=segment.dtype)
+            coeffs.index_copy_(
+                -1,
+                segment.residual_indices.to(device=base_hat.device, dtype=torch.long),
+                signs * scales,
+            )
+            transform = self._hadamard_residual_matrix(
+                dimension,
+                device=base_hat.device,
+                dtype=segment.dtype,
+                name=name,
+                layer_idx=layer_idx,
+            )
+            residual_hat = coeffs @ transform
+            return (base_hat.reshape(-1, dimension) + residual_hat).reshape(segment.shape)
         if isinstance(segment, OutlierMSESegment):
             regular = self._decode_segment(segment.regular, name=f"{name}_regular", layer_idx=layer_idx)
             outlier = self._decode_segment(segment.outlier, name=f"{name}_outlier", layer_idx=layer_idx)
@@ -1745,6 +2550,79 @@ class TurboQuantDynamicCache(Cache):
             output.index_copy_(-1, segment.regular_indices.to(device=regular.device, dtype=torch.long), regular)
             output.index_copy_(-1, segment.outlier_indices.to(device=regular.device, dtype=torch.long), outlier)
             return output
+        if isinstance(segment, RotatedOutlierMSESegment):
+            dimension = segment.shape[-1]
+            base_kind = (
+                "calibrated_rotation_mse"
+                if segment.quantizer_kind == "calibrated_rotated_outlier_mse"
+                else "mse"
+            )
+            quantizer_name = (
+                "key"
+                if segment.quantizer_kind
+                in {
+                    "attention_adaptive_paired_rotated_outlier_mse",
+                    "entropy_guarded_paired_rotated_outlier_mse",
+                    "paired_rotated_outlier_mse",
+                    "shared_rotated_outlier_mse",
+                }
+                else name
+            )
+            quantizer = self._get_quantizer(
+                quantizer_kind=base_kind,
+                name=quantizer_name,
+                dimension=dimension,
+                bits=segment.regular_bits,
+                layer_idx=layer_idx,
+                device=segment.packed_regular_indices.device,
+                dtype=segment.dtype,
+            )
+            if not isinstance(quantizer, TurboQuantMSE):
+                raise TypeError("rotated_outlier_mse expects TurboQuantMSE quantizers")
+            outlier_quantizer = self._get_quantizer(
+                quantizer_kind=base_kind,
+                name=quantizer_name,
+                dimension=dimension,
+                bits=segment.outlier_bits,
+                layer_idx=layer_idx,
+                device=segment.packed_outlier_indices.device,
+                dtype=segment.dtype,
+            )
+            if not isinstance(outlier_quantizer, TurboQuantMSE):
+                raise TypeError("rotated_outlier_mse expects TurboQuantMSE quantizers")
+            regular_indices = unpack_indices(
+                segment.packed_regular_indices,
+                bits=segment.regular_bits,
+                shape=(*segment.shape[:-1], int(segment.regular_indices.numel())),
+            ).reshape(-1, int(segment.regular_indices.numel()))
+            outlier_indices = unpack_indices(
+                segment.packed_outlier_indices,
+                bits=segment.outlier_bits,
+                shape=(*segment.shape[:-1], int(segment.outlier_indices.numel())),
+            ).reshape(-1, int(segment.outlier_indices.numel()))
+            rotated_hat = torch.empty(
+                (_numel(segment.shape[:-1]), dimension),
+                device=segment.packed_regular_indices.device,
+                dtype=segment.dtype,
+            )
+            centroids = quantizer.centroids
+            rotated_hat.index_copy_(
+                -1,
+                segment.regular_indices.to(device=rotated_hat.device, dtype=torch.long),
+                centroids[regular_indices.to(device=rotated_hat.device, dtype=torch.long)].to(dtype=segment.dtype),
+            )
+            rotated_hat.index_copy_(
+                -1,
+                segment.outlier_indices.to(device=rotated_hat.device, dtype=torch.long),
+                outlier_quantizer.centroids[outlier_indices.to(device=rotated_hat.device, dtype=torch.long)].to(
+                    dtype=segment.dtype
+                ),
+            )
+            x_hat_unit = rotated_hat @ quantizer.inverse_transform.T
+            regular_scales = segment.regular_norms.reshape(-1).to(device=x_hat_unit.device, dtype=segment.dtype)
+            outlier_scales = segment.outlier_norms.reshape(-1).to(device=x_hat_unit.device, dtype=segment.dtype)
+            scales = 0.5 * (regular_scales + outlier_scales)
+            return (x_hat_unit * scales.unsqueeze(-1)).reshape(segment.shape)
         if isinstance(segment, HeadAdaptiveOutlierMSESegment):
             head_outputs = [
                 self._decode_segment(head_segment, name=name, layer_idx=layer_idx).unsqueeze(-3)
@@ -1783,6 +2661,38 @@ class TurboQuantDynamicCache(Cache):
 
         dimension = segment.shape[-1]
         quantizer_kind = segment.quantizer_kind
+        if quantizer_kind in {"rotation_bank_mse", "attention_rotation_bank_mse", "segment_rotation_bank_mse"}:
+            if segment.packed_rotation_ids is None or segment.rotation_id_bits is None:
+                raise ValueError("rotation_bank_mse segment is missing rotation ids")
+            indices = unpack_indices(segment.packed_indices, bits=segment.bits, shape=segment.shape).reshape(-1, dimension)
+            norms = segment.norms.reshape(-1)
+            rotation_ids = unpack_indices(
+                segment.packed_rotation_ids,
+                bits=segment.rotation_id_bits,
+                shape=segment.shape[:-1],
+            ).reshape(-1).to(device=segment.packed_indices.device, dtype=torch.long)
+            output = torch.empty((indices.shape[0], dimension), device=segment.packed_indices.device, dtype=segment.dtype)
+            bank_size = int(segment.rotation_bank_size or self.config.rotation_bank_size)
+            for rotation_idx in range(bank_size):
+                mask = rotation_ids == rotation_idx
+                if not bool(mask.any()):
+                    continue
+                quantizer = self._get_quantizer(
+                    quantizer_kind=quantizer_kind,
+                    name=name,
+                    dimension=dimension,
+                    bits=segment.bits,
+                    layer_idx=layer_idx,
+                    device=segment.packed_indices.device,
+                    dtype=segment.dtype,
+                    rotation_bank_index=rotation_idx,
+                )
+                if not isinstance(quantizer, TurboQuantMSE):
+                    raise TypeError("rotation_bank_mse expects TurboQuantMSE quantizers")
+                quantized = MSEQuantized(indices=indices[mask], norms=norms[mask])
+                output[mask] = quantizer.dequantize(quantized)
+            return output.reshape(segment.shape)
+
         quantizer = self._get_quantizer(
             quantizer_kind=quantizer_kind,
             name=name,
@@ -1800,6 +2710,1883 @@ class TurboQuantDynamicCache(Cache):
             quantized = MSEQuantized(indices=indices.reshape(-1, dimension), norms=segment.norms.reshape(-1))
         return quantizer.dequantize(quantized).reshape(segment.shape)
 
+    def _outlier_hadamard_permutation(self, states: torch.Tensor, *, block_size: int) -> torch.Tensor:
+        dimension = states.shape[-1]
+        scores = states.detach().abs().to(dtype=torch.float32).mean(dim=tuple(range(states.ndim - 1)))
+        order = torch.argsort(scores, descending=True)
+        slots: list[int] = []
+        block_count = max(1, ceil(dimension / block_size))
+        for offset in range(block_size):
+            for block_idx in range(block_count):
+                slot = block_idx * block_size + offset
+                if slot < dimension:
+                    slots.append(slot)
+        permutation = torch.empty(dimension, device=states.device, dtype=torch.long)
+        permutation[torch.tensor(slots, device=states.device, dtype=torch.long)] = order
+        return permutation
+
+    def _outlier_hadamard_signs(self, *, dimension: int, device: torch.device, dtype: torch.dtype, seed: int) -> torch.Tensor:
+        gen = torch.Generator(device=device)
+        gen.manual_seed(seed)
+        signs = torch.randint(0, 2, (dimension,), generator=gen, device=device, dtype=torch.int8)
+        return signs.to(dtype=dtype).mul_(2).sub_(1)
+
+    def _block_hadamard_transform(self, x: torch.Tensor, *, block_size: int, inverse: bool = False) -> torch.Tensor:
+        dimension = x.shape[-1]
+        pieces = []
+        for start in range(0, dimension, block_size):
+            end = min(start + block_size, dimension)
+            current = end - start
+            if current == 1:
+                pieces.append(x[..., start:end])
+                continue
+            if current & (current - 1):
+                transform = hadamard_orthogonal(1 << (current - 1).bit_length(), device=x.device, dtype=x.dtype, seed=None)
+                transform = transform[:current, :current]
+                q, _ = torch.linalg.qr(transform.to(dtype=torch.float32))
+                transform = q.to(device=x.device, dtype=x.dtype)
+            else:
+                transform = hadamard_orthogonal(current, device=x.device, dtype=x.dtype, seed=None)
+            pieces.append(x[..., start:end] @ (transform if inverse else transform.T))
+        return torch.cat(pieces, dim=-1)
+
+    def _apply_outlier_hadamard_transform(
+        self,
+        x: torch.Tensor,
+        *,
+        permutation: torch.Tensor,
+        signs: torch.Tensor,
+        block_size: int,
+    ) -> torch.Tensor:
+        permuted = x.index_select(-1, permutation) * signs
+        return self._block_hadamard_transform(permuted, block_size=block_size, inverse=False)
+
+    def _inverse_outlier_hadamard_transform(
+        self,
+        transformed: torch.Tensor,
+        *,
+        permutation: torch.Tensor,
+        signs: torch.Tensor,
+        block_size: int,
+    ) -> torch.Tensor:
+        permuted_hat = self._block_hadamard_transform(transformed, block_size=block_size, inverse=True) * signs
+        output = torch.empty_like(permuted_hat)
+        output.index_copy_(-1, permutation, permuted_hat)
+        return output
+
+    def _quantize_outlier_hadamard_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: int,
+        name: str,
+        layer_idx: int,
+        permutation: torch.Tensor | None = None,
+        signs: torch.Tensor | None = None,
+    ) -> OutlierHadamardSegment:
+        if bits >= 16:
+            raise ValueError("outlier_hadamard_mse is only used for packed low-bit segments")
+        original_shape = tuple(states.shape)
+        dimension = original_shape[-1]
+        block_size = min(self.config.outlier_hadamard_block_size, dimension)
+        flat = states.reshape(-1, dimension)
+        norms = torch.linalg.vector_norm(flat, dim=-1, keepdim=True).clamp_min(torch.finfo(states.dtype).eps)
+        unit = flat / norms
+        if permutation is None:
+            permutation = self._outlier_hadamard_permutation(states, block_size=block_size)
+        else:
+            permutation = permutation.to(device=states.device, dtype=torch.long)
+        if signs is None:
+            signs = self._outlier_hadamard_signs(
+                dimension=dimension,
+                device=states.device,
+                dtype=states.dtype,
+                seed=self.config.seed + 1_000 * layer_idx + (0 if name == "key" else 500) + 17_171,
+            )
+        else:
+            signs = signs.to(device=states.device, dtype=states.dtype)
+        transformed = self._apply_outlier_hadamard_transform(unit, permutation=permutation, signs=signs, block_size=block_size)
+        base_quantizer = self._get_quantizer(
+            quantizer_kind="mse",
+            name=name,
+            dimension=dimension,
+            bits=bits,
+            layer_idx=layer_idx,
+            device=states.device,
+            dtype=states.dtype,
+        )
+        if not isinstance(base_quantizer, TurboQuantMSE):
+            raise TypeError("outlier_hadamard_mse expects TurboQuantMSE codebooks")
+        distances = torch.abs(transformed.unsqueeze(-1) - base_quantizer.centroids)
+        indices = torch.argmin(distances, dim=-1).to(torch.int16)
+        return OutlierHadamardSegment(
+            packed_indices=pack_indices(indices, bits),
+            norms=norms.squeeze(-1).reshape(original_shape[:-1]).detach(),
+            permutation=permutation.to(dtype=torch.int16).detach(),
+            signs=signs.to(dtype=torch.int8).detach(),
+            shape=original_shape,
+            bits=bits,
+            dtype=states.dtype,
+            block_size=block_size,
+        )
+
+    def _quantize_adaptive_outlier_hadamard_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: int,
+        name: str,
+        layer_idx: int,
+    ) -> CacheSegment:
+        baseline_segment = self._quantize_to_segment(
+            states,
+            bits=bits,
+            name=name,
+            quantizer_kind="mse",
+            layer_idx=layer_idx,
+        )
+        hadamard_segment = self._quantize_outlier_hadamard_to_segment(
+            states,
+            bits=bits,
+            name=name,
+            layer_idx=layer_idx,
+        )
+        states_f = states.detach().to(dtype=torch.float32)
+        baseline_hat = self._decode_segment(baseline_segment, name=name, layer_idx=layer_idx).to(dtype=torch.float32)
+        hadamard_hat = self._decode_segment(hadamard_segment, name=name, layer_idx=layer_idx).to(dtype=torch.float32)
+        baseline_error = torch.mean((states_f - baseline_hat) ** 2)
+        hadamard_error = torch.mean((states_f - hadamard_hat) ** 2)
+        if bool(hadamard_error < baseline_error):
+            return hadamard_segment
+        return baseline_segment
+
+    def _quantize_vector_adaptive_outlier_hadamard_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: int,
+        name: str,
+        layer_idx: int,
+        activation_margin: float = 1.0,
+    ) -> CacheSegment:
+        if bits >= 16:
+            return RawTensorSegment(tensor=states.detach())
+        original_shape = tuple(states.shape)
+        dimension = original_shape[-1]
+        flat = states.reshape(-1, dimension)
+        if flat.shape[0] <= 1:
+            return self._quantize_to_segment(
+                states,
+                bits=bits,
+                name=f"{name}_vector_baseline",
+                quantizer_kind="mse",
+                layer_idx=layer_idx,
+            )
+
+        block_size = min(self.config.outlier_hadamard_block_size, dimension)
+        permutation = self._outlier_hadamard_permutation(states, block_size=block_size)
+        signs = self._outlier_hadamard_signs(
+            dimension=dimension,
+            device=states.device,
+            dtype=states.dtype,
+            seed=self.config.seed + 1_000 * layer_idx + (0 if name == "key" else 500) + 17_171,
+        )
+
+        baseline_probe = self._quantize_to_segment(
+            states,
+            bits=bits,
+            name=f"{name}_vector_baseline_probe",
+            quantizer_kind="mse",
+            layer_idx=layer_idx,
+        )
+        candidate_probe = self._quantize_outlier_hadamard_to_segment(
+            states,
+            bits=bits,
+            name=f"{name}_vector_candidate_probe",
+            layer_idx=layer_idx,
+            permutation=permutation,
+            signs=signs,
+        )
+        states_f = flat.detach().to(dtype=torch.float32)
+        baseline_hat = self._decode_segment(
+            baseline_probe,
+            name=f"{name}_vector_baseline_probe",
+            layer_idx=layer_idx,
+        ).reshape(-1, dimension).to(dtype=torch.float32)
+        candidate_hat = self._decode_segment(
+            candidate_probe,
+            name=f"{name}_vector_candidate_probe",
+            layer_idx=layer_idx,
+        ).reshape(-1, dimension).to(dtype=torch.float32)
+        baseline_error = (states_f - baseline_hat).square().mean(dim=-1)
+        candidate_error = (states_f - candidate_hat).square().mean(dim=-1)
+        candidate_mask = candidate_error < baseline_error * float(activation_margin)
+        candidate_count = int(candidate_mask.sum().item())
+        if candidate_count == 0:
+            return baseline_probe
+        if candidate_count == flat.shape[0]:
+            return candidate_probe
+
+        baseline_states = flat[~candidate_mask]
+        candidate_states = flat[candidate_mask]
+        baseline_segment = self._quantize_to_segment(
+            baseline_states,
+            bits=bits,
+            name=f"{name}_vector_baseline",
+            quantizer_kind="mse",
+            layer_idx=layer_idx,
+        )
+        candidate_segment = self._quantize_outlier_hadamard_to_segment(
+            candidate_states,
+            bits=bits,
+            name=f"{name}_vector_candidate",
+            layer_idx=layer_idx,
+            permutation=permutation,
+            signs=signs,
+        )
+        return VectorAdaptiveRotationSegment(
+            baseline=baseline_segment,
+            candidate=candidate_segment,
+            packed_candidate_mask=pack_indices(candidate_mask.reshape(original_shape[:-1]).to(dtype=torch.int16), 1).detach(),
+            selector_shape=original_shape[:-1],
+            shape=original_shape,
+            dtype=states.dtype,
+            bits=bits,
+            candidate_kind="outlier_hadamard_mse",
+        )
+
+    def _quantize_attention_adaptive_outlier_hadamard_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+        query_states: torch.Tensor | None,
+        key_states_for_attention: torch.Tensor | None,
+        scaling: float,
+    ) -> CacheSegment:
+        baseline_segment = self._quantize_effective_to_segment(
+            states,
+            bits=bits,
+            name=name,
+            quantizer_kind="mse",
+            layer_idx=layer_idx,
+            allow_token_protection=False,
+            query_states=query_states,
+            key_states_for_attention=key_states_for_attention,
+            scaling=scaling,
+        )
+        candidate_segment = self._quantize_effective_to_segment(
+            states,
+            bits=bits,
+            name=name,
+            quantizer_kind="outlier_hadamard_mse",
+            layer_idx=layer_idx,
+            allow_token_protection=False,
+            query_states=query_states,
+            key_states_for_attention=key_states_for_attention,
+            scaling=scaling,
+        )
+        baseline_hat = self._decode_segment(baseline_segment, name=name, layer_idx=layer_idx)
+        candidate_hat = self._decode_segment(candidate_segment, name=name, layer_idx=layer_idx)
+        baseline_error = self._attention_auto_mse_error(
+            states,
+            baseline_hat,
+            name=name,
+            query_states=query_states,
+            key_states_for_attention=key_states_for_attention,
+            scaling=scaling,
+        )
+        candidate_error = self._attention_auto_mse_error(
+            states,
+            candidate_hat,
+            name=name,
+            query_states=query_states,
+            key_states_for_attention=key_states_for_attention,
+            scaling=scaling,
+        )
+        if candidate_error < baseline_error:
+            return candidate_segment
+        return baseline_segment
+
+    def _quantize_attention_scale_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: int,
+        name: str,
+        layer_idx: int,
+        query_states: torch.Tensor | None,
+        scaling: float,
+    ) -> CacheSegment:
+        if name != "key" or query_states is None or states.ndim != 4 or query_states.ndim != 4:
+            return self._quantize_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind="mse",
+                layer_idx=layer_idx,
+            )
+        original_shape = tuple(states.shape)
+        dimension = original_shape[-1]
+        flat = states.reshape(-1, dimension)
+        quantizer = self._get_quantizer(
+            quantizer_kind="mse",
+            name=name,
+            dimension=dimension,
+            bits=bits,
+            layer_idx=layer_idx,
+            device=states.device,
+            dtype=states.dtype,
+        )
+        if not isinstance(quantizer, TurboQuantMSE):
+            raise TypeError("attention_scale_mse expects TurboQuantMSE")
+        quantized = quantizer.quantize(flat)
+        unit_hat = quantizer.dequantize(
+            MSEQuantized(
+                indices=quantized.indices,
+                norms=torch.ones_like(quantized.norms),
+            )
+        ).reshape(original_shape)
+
+        query_tokens = min(self.config.attention_error_query_tokens, query_states.shape[-2])
+        query_focus = query_states[..., -query_tokens:, :]
+        bsz, num_query_heads, _, head_dim = query_focus.shape
+        num_key_heads = states.shape[1]
+        if num_query_heads % num_key_heads != 0 or head_dim != dimension:
+            return PackedMSESegment(
+                packed_indices=pack_indices(quantized.indices, bits),
+                norms=quantized.norms.reshape(original_shape[:-1]).detach(),
+                shape=original_shape,
+                bits=bits,
+                dtype=states.dtype,
+                quantizer_kind="mse",
+            )
+        num_groups = num_query_heads // num_key_heads
+        query_grouped = query_focus.reshape(bsz, num_key_heads, num_groups, query_tokens, head_dim).to(torch.float32)
+        original_scores = torch.einsum("bhgqd,bhsd->bhgqs", query_grouped, states.to(torch.float32)) * float(scaling)
+        unit_scores = torch.einsum("bhgqd,bhsd->bhgqs", query_grouped, unit_hat.to(torch.float32)) * float(scaling)
+        numerator = (original_scores * unit_scores).sum(dim=(2, 3))
+        denominator = unit_scores.square().sum(dim=(2, 3)).clamp_min(torch.finfo(torch.float32).eps)
+        scales = (numerator / denominator).clamp_min(0.0).to(dtype=states.dtype)
+        return PackedMSESegment(
+            packed_indices=pack_indices(quantized.indices, bits),
+            norms=scales.reshape(original_shape[:-1]).detach(),
+            shape=original_shape,
+            bits=bits,
+            dtype=states.dtype,
+            block_size=1,
+            quantizer_kind="mse",
+        )
+
+    def _quantize_rotation_bank_mse_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: int,
+        name: str,
+        layer_idx: int,
+        attention_aware: bool = False,
+        query_states: torch.Tensor | None = None,
+        key_states_for_attention: torch.Tensor | None = None,
+        scaling: float = 1.0,
+    ) -> PackedMSESegment:
+        if bits >= 16:
+            raise ValueError("rotation_bank_mse is only used for packed low-bit segments")
+        original_shape = tuple(states.shape)
+        dimension = original_shape[-1]
+        flat = states.reshape(-1, dimension)
+        flat_f = flat.detach().to(dtype=torch.float32)
+        best_error: torch.Tensor | None = None
+        best_global_error: float | None = None
+        best_indices: torch.Tensor | None = None
+        best_norms: torch.Tensor | None = None
+        best_rotation_ids: torch.Tensor | None = None
+
+        for rotation_idx in range(self.config.rotation_bank_size):
+            quantizer = self._get_quantizer(
+                quantizer_kind="rotation_bank_mse",
+                name=name,
+                dimension=dimension,
+                bits=bits,
+                layer_idx=layer_idx,
+                device=states.device,
+                dtype=states.dtype,
+                rotation_bank_index=rotation_idx,
+            )
+            if not isinstance(quantizer, TurboQuantMSE):
+                raise TypeError("rotation_bank_mse expects TurboQuantMSE quantizers")
+            quantized = quantizer.quantize(flat)
+            decoded = quantizer.dequantize(quantized).to(dtype=torch.float32)
+            candidate_ids = torch.full(
+                (flat.shape[0],),
+                rotation_idx,
+                device=states.device,
+                dtype=torch.int16,
+            )
+            if attention_aware and query_states is not None and key_states_for_attention is not None:
+                decoded_states = decoded.reshape(original_shape).to(dtype=states.dtype)
+                global_error = self._attention_auto_mse_error(
+                    states,
+                    decoded_states,
+                    name=name,
+                    query_states=query_states,
+                    key_states_for_attention=key_states_for_attention,
+                    scaling=scaling,
+                )
+                if best_global_error is None or global_error < best_global_error:
+                    best_global_error = global_error
+                    best_indices = quantized.indices
+                    best_norms = quantized.norms
+                    best_rotation_ids = candidate_ids
+                continue
+            error = (flat_f - decoded).square().sum(dim=-1)
+            if best_error is None:
+                best_error = error
+                best_indices = quantized.indices
+                best_norms = quantized.norms
+                best_rotation_ids = candidate_ids
+                continue
+            selected = error < best_error
+            best_error = torch.where(selected, error, best_error)
+            best_indices = torch.where(selected.unsqueeze(-1), quantized.indices, best_indices)
+            best_norms = torch.where(selected, quantized.norms, best_norms)
+            best_rotation_ids = torch.where(selected, candidate_ids, best_rotation_ids)
+
+        if best_indices is None or best_norms is None or best_rotation_ids is None:
+            raise RuntimeError("rotation_bank_mse did not produce a candidate segment")
+        packed = pack_indices(best_indices, bits)
+        rotation_id_bits = max(1, int((self.config.rotation_bank_size - 1).bit_length()))
+        packed_rotation_ids = pack_indices(best_rotation_ids, rotation_id_bits)
+        return PackedMSESegment(
+            packed_indices=packed,
+            norms=best_norms.reshape(original_shape[:-1]).detach(),
+            shape=original_shape,
+            bits=bits,
+            dtype=states.dtype,
+            block_size=1,
+            quantizer_kind="attention_rotation_bank_mse" if attention_aware else "rotation_bank_mse",
+            packed_rotation_ids=packed_rotation_ids.detach(),
+            rotation_id_bits=rotation_id_bits,
+            rotation_bank_size=self.config.rotation_bank_size,
+        )
+
+    def _quantize_fixed_rotation_bank_mse_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: int,
+        name: str,
+        layer_idx: int,
+        rotation_bank_index: int,
+        quantizer_kind: str,
+    ) -> PackedMSESegment:
+        original_shape = tuple(states.shape)
+        dimension = original_shape[-1]
+        flat = states.reshape(-1, dimension)
+        quantizer = self._get_quantizer(
+            quantizer_kind=quantizer_kind,
+            name=name,
+            dimension=dimension,
+            bits=bits,
+            layer_idx=layer_idx,
+            device=states.device,
+            dtype=states.dtype,
+            rotation_bank_index=rotation_bank_index,
+        )
+        if not isinstance(quantizer, TurboQuantMSE):
+            raise TypeError("rotation-bank quantizers expect TurboQuantMSE")
+        quantized = quantizer.quantize(flat)
+        rotation_ids = torch.full(
+            original_shape[:-1],
+            rotation_bank_index,
+            device=states.device,
+            dtype=torch.int16,
+        )
+        rotation_id_bits = max(1, int((self.config.rotation_bank_size - 1).bit_length()))
+        return PackedMSESegment(
+            packed_indices=pack_indices(quantized.indices, bits),
+            norms=quantized.norms.reshape(original_shape[:-1]).detach(),
+            shape=original_shape,
+            bits=bits,
+            dtype=states.dtype,
+            block_size=1,
+            quantizer_kind=quantizer_kind,
+            packed_rotation_ids=pack_indices(rotation_ids, rotation_id_bits).detach(),
+            rotation_id_bits=rotation_id_bits,
+            rotation_bank_size=self.config.rotation_bank_size,
+        )
+
+    def _quantize_fixed_rotation_bank_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+        rotation_bank_index: int,
+        quantizer_kind: str,
+    ) -> CacheSegment:
+        regular_bits, outlier_bits, outlier_count = self._resolve_effective_bit_allocation(bits, states.shape[-1])
+        if outlier_count == 0:
+            return self._quantize_fixed_rotation_bank_mse_to_segment(
+                states,
+                bits=regular_bits,
+                name=name,
+                layer_idx=layer_idx,
+                rotation_bank_index=rotation_bank_index,
+                quantizer_kind=quantizer_kind,
+            )
+
+        outlier_indices = self._select_outlier_channels(
+            states,
+            outlier_count,
+            regular_bits=regular_bits,
+            outlier_bits=outlier_bits,
+            name=name,
+            quantizer_kind="mse",
+            layer_idx=layer_idx,
+        )
+        original_shape = tuple(states.shape)
+        all_indices = torch.arange(states.shape[-1], device=states.device, dtype=torch.long)
+        regular_mask = torch.ones(states.shape[-1], device=states.device, dtype=torch.bool)
+        regular_mask[outlier_indices] = False
+        regular_indices = all_indices[regular_mask]
+        regular_segment = self._quantize_fixed_rotation_bank_mse_to_segment(
+            states.index_select(-1, regular_indices),
+            bits=regular_bits,
+            name=f"{name}_regular",
+            layer_idx=layer_idx,
+            rotation_bank_index=rotation_bank_index,
+            quantizer_kind=quantizer_kind,
+        )
+        outlier_segment = self._quantize_fixed_rotation_bank_mse_to_segment(
+            states.index_select(-1, outlier_indices),
+            bits=outlier_bits,
+            name=f"{name}_outlier",
+            layer_idx=layer_idx,
+            rotation_bank_index=rotation_bank_index,
+            quantizer_kind=quantizer_kind,
+        )
+        return OutlierMSESegment(
+            regular=regular_segment,
+            outlier=outlier_segment,
+            regular_indices=regular_indices.to(dtype=torch.int16),
+            outlier_indices=outlier_indices.to(dtype=torch.int16),
+            shape=original_shape,
+            dtype=states.dtype,
+            requested_bits=float(bits),
+            policy=self._outlier_policy_for(name),
+        )
+
+    def _quantize_attention_rotation_bank_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+        query_states: torch.Tensor,
+        key_states_for_attention: torch.Tensor,
+        scaling: float,
+    ) -> CacheSegment:
+        best_segment: CacheSegment | None = None
+        best_error: float | None = None
+        for rotation_idx in range(self.config.rotation_bank_size):
+            segment = self._quantize_fixed_rotation_bank_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                rotation_bank_index=rotation_idx,
+                quantizer_kind="attention_rotation_bank_mse",
+            )
+            decoded = self._decode_segment(segment, name=name, layer_idx=layer_idx)
+            error = self._attention_auto_mse_error(
+                states,
+                decoded,
+                name=name,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+            if best_error is None or error < best_error:
+                best_error = error
+                best_segment = segment
+        if best_segment is None:
+            raise RuntimeError("attention_rotation_bank_mse did not produce a candidate segment")
+        return best_segment
+
+    def _quantize_segment_rotation_bank_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+    ) -> CacheSegment:
+        best_segment: CacheSegment | None = None
+        best_error: float | None = None
+        states_f = states.detach().to(dtype=torch.float32)
+        for rotation_idx in range(self.config.rotation_bank_size):
+            segment = self._quantize_fixed_rotation_bank_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+                rotation_bank_index=rotation_idx,
+                quantizer_kind="segment_rotation_bank_mse",
+            )
+            decoded = self._decode_segment(segment, name=name, layer_idx=layer_idx).to(dtype=torch.float32)
+            error = float(torch.mean((states_f - decoded) ** 2).item())
+            if best_error is None or error < best_error:
+                best_error = error
+                best_segment = segment
+        if best_segment is None:
+            raise RuntimeError("segment_rotation_bank_mse did not produce a candidate segment")
+        return best_segment
+
+    def _score_rotated_outlier_gain(
+        self,
+        gain: torch.Tensor,
+        *,
+        norms: torch.Tensor,
+        quantizer: TurboQuantMSE,
+        original_shape: tuple[int, ...],
+        name: str,
+        query_states: torch.Tensor | None,
+        key_states_for_attention: torch.Tensor | None,
+        scaling: float,
+        attention_aware: bool,
+    ) -> torch.Tensor:
+        gain = gain.clamp_min(0.0).reshape(original_shape).to(dtype=torch.float32)
+        if (
+            not attention_aware
+            or query_states is None
+            or key_states_for_attention is None
+            or len(original_shape) != 4
+            or query_states.ndim != 4
+            or key_states_for_attention.ndim != 4
+            or key_states_for_attention.shape[-2] != original_shape[-2]
+        ):
+            return gain.mean(dim=tuple(range(gain.ndim - 1)))
+
+        key_scores = self._grouped_attention_scores(query_states, key_states_for_attention, scaling=scaling)
+        probs = self._causal_attention_probs(key_scores, key_len=key_states_for_attention.shape[-2]).detach()
+        norm_weight = norms.reshape(original_shape[:-1]).to(dtype=torch.float32).square()
+
+        if name == "key":
+            query_tokens = min(self.config.attention_error_query_tokens, query_states.shape[-2])
+            query_focus = query_states[..., -query_tokens:, :]
+            bsz, num_query_heads, _, head_dim = query_focus.shape
+            num_key_heads = original_shape[1]
+            if num_query_heads % num_key_heads != 0 or head_dim != original_shape[-1]:
+                return gain.mean(dim=tuple(range(gain.ndim - 1)))
+            num_groups = num_query_heads // num_key_heads
+            query_grouped = query_focus.reshape(bsz, num_key_heads, num_groups, query_tokens, head_dim)
+            query_rotated = query_grouped.to(dtype=quantizer.transform.dtype) @ quantizer.transform.T
+            query_sensitivity = query_rotated.to(dtype=torch.float32).square().mean(dim=(2, 3))
+            token_weight = probs.mean(dim=(2, 3))
+            weighted = gain * norm_weight.unsqueeze(-1) * token_weight.unsqueeze(-1) * query_sensitivity.unsqueeze(-2)
+            return weighted.mean(dim=(0, 1, 2))
+
+        if name == "value":
+            token_weight = probs.square().mean(dim=(2, 3))
+            weighted = gain * norm_weight.unsqueeze(-1) * token_weight.unsqueeze(-1)
+            return weighted.mean(dim=(0, 1, 2))
+
+        return gain.mean(dim=tuple(range(gain.ndim - 1)))
+
+    def _quantize_rotated_outlier_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+        base_quantizer_kind: str = "mse",
+        segment_quantizer_kind: str = "rotated_outlier_mse",
+        quantizer_name: str | None = None,
+        query_states: torch.Tensor | None = None,
+        key_states_for_attention: torch.Tensor | None = None,
+        scaling: float = 1.0,
+        attention_aware: bool = False,
+    ) -> CacheSegment:
+        regular_bits, outlier_bits, outlier_count = self._resolve_effective_bit_allocation(bits, states.shape[-1])
+        if outlier_count == 0:
+            return self._quantize_to_segment(
+                states,
+                bits=regular_bits,
+                name=name,
+                quantizer_kind=base_quantizer_kind,
+                layer_idx=layer_idx,
+            )
+
+        original_shape = tuple(states.shape)
+        dimension = original_shape[-1]
+        flat = states.reshape(-1, dimension)
+        flat_f = flat.detach().to(dtype=torch.float32)
+        rotation_name = name if quantizer_name is None else quantizer_name
+
+        regular_quantizer = self._get_quantizer(
+            quantizer_kind=base_quantizer_kind,
+            name=rotation_name,
+            dimension=dimension,
+            bits=regular_bits,
+            layer_idx=layer_idx,
+            device=states.device,
+            dtype=states.dtype,
+        )
+        outlier_quantizer = self._get_quantizer(
+            quantizer_kind=base_quantizer_kind,
+            name=rotation_name,
+            dimension=dimension,
+            bits=outlier_bits,
+            layer_idx=layer_idx,
+            device=states.device,
+            dtype=states.dtype,
+        )
+        if not isinstance(regular_quantizer, TurboQuantMSE) or not isinstance(outlier_quantizer, TurboQuantMSE):
+            raise TypeError("rotated_outlier_mse expects TurboQuantMSE quantizers")
+
+        norms = torch.linalg.vector_norm(flat, dim=-1, keepdim=True).clamp_min(torch.finfo(states.dtype).eps)
+        unit = flat / norms
+        rotated = unit @ regular_quantizer.transform.T
+        regular_distances = torch.abs(rotated.unsqueeze(-1) - regular_quantizer.centroids)
+        regular_indices_all = torch.argmin(regular_distances, dim=-1).to(torch.int16)
+        outlier_distances = torch.abs(rotated.unsqueeze(-1) - outlier_quantizer.centroids)
+        outlier_indices_all = torch.argmin(outlier_distances, dim=-1).to(torch.int16)
+
+        regular_hat_all = regular_quantizer.centroids[regular_indices_all.to(dtype=torch.long)]
+        outlier_hat_all = outlier_quantizer.centroids[outlier_indices_all.to(dtype=torch.long)]
+        gain = (rotated.to(dtype=torch.float32) - regular_hat_all.to(dtype=torch.float32)).square() - (
+            rotated.to(dtype=torch.float32) - outlier_hat_all.to(dtype=torch.float32)
+        ).square()
+        scores = self._score_rotated_outlier_gain(
+            gain,
+            norms=norms,
+            quantizer=regular_quantizer,
+            original_shape=original_shape,
+            name=name,
+            query_states=query_states,
+            key_states_for_attention=key_states_for_attention,
+            scaling=scaling,
+            attention_aware=attention_aware,
+        )
+        outlier_indices = torch.topk(scores, k=outlier_count, largest=True, sorted=False).indices.sort().values
+        all_indices = torch.arange(dimension, device=states.device, dtype=torch.long)
+        regular_mask = torch.ones(dimension, device=states.device, dtype=torch.bool)
+        regular_mask[outlier_indices] = False
+        regular_indices = all_indices[regular_mask]
+
+        regular_code_indices = regular_indices_all.index_select(-1, regular_indices)
+        outlier_code_indices = outlier_indices_all.index_select(-1, outlier_indices)
+
+        rotated_hat = regular_hat_all.clone()
+        rotated_hat.index_copy_(-1, outlier_indices, outlier_hat_all.index_select(-1, outlier_indices))
+        x_hat_unit = rotated_hat @ regular_quantizer.inverse_transform.T
+        numerator = (flat_f * x_hat_unit.to(dtype=torch.float32)).sum(dim=-1)
+        denominator = x_hat_unit.to(dtype=torch.float32).square().sum(dim=-1).clamp_min(torch.finfo(torch.float32).eps)
+        scales = (numerator / denominator).to(dtype=states.dtype)
+
+        regular_norms = scales.reshape(original_shape[:-1]).detach()
+        outlier_norms = regular_norms
+        return RotatedOutlierMSESegment(
+            packed_regular_indices=pack_indices(regular_code_indices, regular_bits),
+            regular_norms=regular_norms,
+            packed_outlier_indices=pack_indices(outlier_code_indices, outlier_bits),
+            outlier_norms=outlier_norms,
+            regular_indices=regular_indices.to(dtype=torch.int16),
+            outlier_indices=outlier_indices.to(dtype=torch.int16),
+            shape=original_shape,
+            dtype=states.dtype,
+            regular_bits=regular_bits,
+            outlier_bits=outlier_bits,
+            requested_bits=float(bits),
+            quantizer_kind=segment_quantizer_kind,
+        )
+
+    def _build_shared_rotated_outlier_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+        regular_bits: int,
+        outlier_bits: int,
+        outlier_indices: torch.Tensor,
+        regular_quantizer: TurboQuantMSE,
+        outlier_quantizer: TurboQuantMSE,
+    ) -> RotatedOutlierMSESegment:
+        original_shape = tuple(states.shape)
+        dimension = original_shape[-1]
+        flat = states.reshape(-1, dimension)
+        flat_f = flat.detach().to(dtype=torch.float32)
+        norms = torch.linalg.vector_norm(flat, dim=-1, keepdim=True).clamp_min(torch.finfo(states.dtype).eps)
+        unit = flat / norms
+        rotated = unit @ regular_quantizer.transform.T
+        regular_distances = torch.abs(rotated.unsqueeze(-1) - regular_quantizer.centroids)
+        regular_indices_all = torch.argmin(regular_distances, dim=-1).to(torch.int16)
+        outlier_distances = torch.abs(rotated.unsqueeze(-1) - outlier_quantizer.centroids)
+        outlier_indices_all = torch.argmin(outlier_distances, dim=-1).to(torch.int16)
+
+        regular_hat_all = regular_quantizer.centroids[regular_indices_all.to(dtype=torch.long)]
+        outlier_hat_all = outlier_quantizer.centroids[outlier_indices_all.to(dtype=torch.long)]
+        all_indices = torch.arange(dimension, device=states.device, dtype=torch.long)
+        outlier_indices = outlier_indices.to(device=states.device, dtype=torch.long).sort().values
+        regular_mask = torch.ones(dimension, device=states.device, dtype=torch.bool)
+        regular_mask[outlier_indices] = False
+        regular_indices = all_indices[regular_mask]
+
+        regular_code_indices = regular_indices_all.index_select(-1, regular_indices)
+        outlier_code_indices = outlier_indices_all.index_select(-1, outlier_indices)
+
+        rotated_hat = regular_hat_all.clone()
+        rotated_hat.index_copy_(-1, outlier_indices, outlier_hat_all.index_select(-1, outlier_indices))
+        x_hat_unit = rotated_hat @ regular_quantizer.inverse_transform.T
+        numerator = (flat_f * x_hat_unit.to(dtype=torch.float32)).sum(dim=-1)
+        denominator = x_hat_unit.to(dtype=torch.float32).square().sum(dim=-1).clamp_min(torch.finfo(torch.float32).eps)
+        scales = (numerator / denominator).to(dtype=states.dtype)
+
+        norms_out = scales.reshape(original_shape[:-1]).detach()
+        return RotatedOutlierMSESegment(
+            packed_regular_indices=pack_indices(regular_code_indices, regular_bits),
+            regular_norms=norms_out,
+            packed_outlier_indices=pack_indices(outlier_code_indices, outlier_bits),
+            outlier_norms=norms_out,
+            regular_indices=regular_indices.to(dtype=torch.int16),
+            outlier_indices=outlier_indices.to(dtype=torch.int16),
+            shape=original_shape,
+            dtype=states.dtype,
+            regular_bits=regular_bits,
+            outlier_bits=outlier_bits,
+            requested_bits=float(bits),
+            quantizer_kind="shared_rotated_outlier_mse",
+        )
+
+    def _shared_rotated_outlier_scores(
+        self,
+        states: torch.Tensor,
+        *,
+        regular_quantizer: TurboQuantMSE,
+        outlier_quantizer: TurboQuantMSE,
+    ) -> torch.Tensor:
+        dimension = states.shape[-1]
+        flat = states.reshape(-1, dimension)
+        norms = torch.linalg.vector_norm(flat, dim=-1, keepdim=True).clamp_min(torch.finfo(states.dtype).eps)
+        unit = flat / norms
+        rotated = unit @ regular_quantizer.transform.T
+        regular_distances = torch.abs(rotated.unsqueeze(-1) - regular_quantizer.centroids)
+        regular_indices = torch.argmin(regular_distances, dim=-1)
+        outlier_distances = torch.abs(rotated.unsqueeze(-1) - outlier_quantizer.centroids)
+        outlier_indices = torch.argmin(outlier_distances, dim=-1)
+        regular_hat = regular_quantizer.centroids[regular_indices]
+        outlier_hat = outlier_quantizer.centroids[outlier_indices]
+        gain = (rotated.to(dtype=torch.float32) - regular_hat.to(dtype=torch.float32)).square() - (
+            rotated.to(dtype=torch.float32) - outlier_hat.to(dtype=torch.float32)
+        ).square()
+        return gain.clamp_min(0).reshape(states.shape).mean(dim=tuple(range(states.ndim - 1)))
+
+    def _quantize_shared_rotated_outlier_effective_to_segments(
+        self,
+        key_states: torch.Tensor,
+        value_states: torch.Tensor,
+        *,
+        key_bits: float,
+        value_bits: float,
+        layer_idx: int,
+    ) -> tuple[CacheSegment, CacheSegment]:
+        key_regular_bits, key_outlier_bits, key_outlier_count = self._resolve_effective_bit_allocation(
+            key_bits, key_states.shape[-1]
+        )
+        value_regular_bits, value_outlier_bits, value_outlier_count = self._resolve_effective_bit_allocation(
+            value_bits, value_states.shape[-1]
+        )
+        if (
+            key_outlier_count == 0
+            or value_outlier_count == 0
+            or key_regular_bits != value_regular_bits
+            or key_outlier_bits != value_outlier_bits
+            or key_outlier_count != value_outlier_count
+            or key_bits != value_bits
+            or key_states.shape[-1] != value_states.shape[-1]
+        ):
+            return (
+                self._quantize_effective_to_segment(
+                    key_states,
+                    bits=key_bits,
+                    name="key",
+                    quantizer_kind="rotated_outlier_mse",
+                    layer_idx=layer_idx,
+                ),
+                self._quantize_effective_to_segment(
+                    value_states,
+                    bits=value_bits,
+                    name="value",
+                    quantizer_kind="rotated_outlier_mse",
+                    layer_idx=layer_idx,
+                ),
+            )
+
+        dimension = key_states.shape[-1]
+        regular_quantizer = self._get_quantizer(
+            quantizer_kind="mse",
+            name="key",
+            dimension=dimension,
+            bits=key_regular_bits,
+            layer_idx=layer_idx,
+            device=key_states.device,
+            dtype=key_states.dtype,
+        )
+        outlier_quantizer = self._get_quantizer(
+            quantizer_kind="mse",
+            name="key",
+            dimension=dimension,
+            bits=key_outlier_bits,
+            layer_idx=layer_idx,
+            device=key_states.device,
+            dtype=key_states.dtype,
+        )
+        if not isinstance(regular_quantizer, TurboQuantMSE) or not isinstance(outlier_quantizer, TurboQuantMSE):
+            raise TypeError("shared_rotated_outlier_mse expects TurboQuantMSE quantizers")
+
+        key_scores = self._shared_rotated_outlier_scores(
+            key_states,
+            regular_quantizer=regular_quantizer,
+            outlier_quantizer=outlier_quantizer,
+        )
+        value_scores = self._shared_rotated_outlier_scores(
+            value_states,
+            regular_quantizer=regular_quantizer,
+            outlier_quantizer=outlier_quantizer,
+        )
+        eps = torch.finfo(torch.float32).eps
+        key_scores = key_scores.clamp_min(0)
+        value_scores = value_scores.clamp_min(0)
+        key_scale = key_scores.mean().clamp_min(eps)
+        value_scale = value_scores.mean().clamp_min(eps)
+        shared_scores = key_scores / key_scale + value_scores / value_scale
+        shared_indices = torch.topk(shared_scores, k=key_outlier_count, largest=True, sorted=False).indices.sort().values
+
+        key_segment = self._build_shared_rotated_outlier_segment(
+            key_states,
+            bits=key_bits,
+            name="key",
+            layer_idx=layer_idx,
+            regular_bits=key_regular_bits,
+            outlier_bits=key_outlier_bits,
+            outlier_indices=shared_indices,
+            regular_quantizer=regular_quantizer,
+            outlier_quantizer=outlier_quantizer,
+        )
+        value_segment = self._build_shared_rotated_outlier_segment(
+            value_states,
+            bits=value_bits,
+            name="value",
+            layer_idx=layer_idx,
+            regular_bits=value_regular_bits,
+            outlier_bits=value_outlier_bits,
+            outlier_indices=shared_indices,
+            regular_quantizer=regular_quantizer,
+            outlier_quantizer=outlier_quantizer,
+        )
+        return key_segment, value_segment
+
+    def _quantize_attention_adaptive_rotated_outlier_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+        query_states: torch.Tensor | None,
+        key_states_for_attention: torch.Tensor | None,
+        scaling: float,
+        segment_quantizer_kind: str = "attention_adaptive_rotated_outlier_mse",
+        quantizer_name: str | None = None,
+    ) -> CacheSegment:
+        baseline_segment = self._quantize_effective_to_segment(
+            states,
+            bits=bits,
+            name=name,
+            quantizer_kind="mse",
+            layer_idx=layer_idx,
+            allow_token_protection=False,
+            query_states=query_states,
+            key_states_for_attention=key_states_for_attention,
+            scaling=scaling,
+        )
+        candidate_segment = self._quantize_rotated_outlier_effective_to_segment(
+            states,
+            bits=bits,
+            name=name,
+            layer_idx=layer_idx,
+            base_quantizer_kind="mse",
+            segment_quantizer_kind=segment_quantizer_kind,
+            quantizer_name=quantizer_name,
+            query_states=query_states,
+            key_states_for_attention=key_states_for_attention,
+            scaling=scaling,
+            attention_aware=True,
+        )
+        baseline_hat = self._decode_segment(baseline_segment, name=name, layer_idx=layer_idx)
+        candidate_hat = self._decode_segment(candidate_segment, name=name, layer_idx=layer_idx)
+        baseline_error = self._attention_auto_mse_error(
+            states,
+            baseline_hat,
+            name=name,
+            query_states=query_states,
+            key_states_for_attention=key_states_for_attention,
+            scaling=scaling,
+        )
+        candidate_error = self._attention_auto_mse_error(
+            states,
+            candidate_hat,
+            name=name,
+            query_states=query_states,
+            key_states_for_attention=key_states_for_attention,
+            scaling=scaling,
+        )
+        if candidate_error < baseline_error:
+            return candidate_segment
+        return baseline_segment
+
+    def _quantize_entropy_guarded_paired_rotated_outlier_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+        query_states: torch.Tensor | None,
+        key_states_for_attention: torch.Tensor | None,
+        scaling: float,
+    ) -> CacheSegment:
+        entropy_ratio = self._attention_entropy_ratio(
+            query_states=query_states,
+            key_states=key_states_for_attention,
+            scaling=scaling,
+            query_tokens=self.config.attention_error_query_tokens,
+        )
+        if entropy_ratio is None or entropy_ratio > self.config.attention_entropy_threshold:
+            return self._quantize_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind="mse",
+                layer_idx=layer_idx,
+                allow_token_protection=False,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        return self._quantize_rotated_outlier_effective_to_segment(
+            states,
+            bits=bits,
+            name=name,
+            layer_idx=layer_idx,
+            base_quantizer_kind="mse",
+            segment_quantizer_kind="entropy_guarded_paired_rotated_outlier_mse",
+            quantizer_name="key",
+            query_states=query_states,
+            key_states_for_attention=key_states_for_attention,
+            scaling=scaling,
+            attention_aware=False,
+        )
+
+    def _quantize_regular_outlier_hadamard_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+    ) -> CacheSegment:
+        regular_bits, outlier_bits, outlier_count = self._resolve_effective_bit_allocation(bits, states.shape[-1])
+        if outlier_count == 0:
+            return self._quantize_to_segment(
+                states,
+                bits=regular_bits,
+                name=name,
+                quantizer_kind="outlier_hadamard_mse",
+                layer_idx=layer_idx,
+            )
+        outlier_indices = self._select_outlier_channels(
+            states,
+            outlier_count,
+            regular_bits=regular_bits,
+            outlier_bits=outlier_bits,
+            name=name,
+            quantizer_kind="mse",
+            layer_idx=layer_idx,
+        )
+        original_shape = tuple(states.shape)
+        all_indices = torch.arange(states.shape[-1], device=states.device, dtype=torch.long)
+        regular_mask = torch.ones(states.shape[-1], device=states.device, dtype=torch.bool)
+        regular_mask[outlier_indices] = False
+        regular_indices = all_indices[regular_mask]
+        regular_segment = self._quantize_to_segment(
+            states.index_select(-1, regular_indices),
+            bits=regular_bits,
+            name=f"{name}_regular",
+            quantizer_kind="outlier_hadamard_mse",
+            layer_idx=layer_idx,
+        )
+        outlier_segment = self._quantize_to_segment(
+            states.index_select(-1, outlier_indices),
+            bits=outlier_bits,
+            name=f"{name}_outlier",
+            quantizer_kind="mse",
+            layer_idx=layer_idx,
+        )
+        return OutlierMSESegment(
+            regular=regular_segment,
+            outlier=outlier_segment,
+            regular_indices=regular_indices.to(dtype=torch.int16),
+            outlier_indices=outlier_indices.to(dtype=torch.int16),
+            shape=original_shape,
+            dtype=states.dtype,
+            requested_bits=float(bits),
+            policy=self._outlier_policy_for(name),
+        )
+
+    def _quantize_outlier_only_hadamard_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+    ) -> CacheSegment:
+        regular_bits, outlier_bits, outlier_count = self._resolve_effective_bit_allocation(bits, states.shape[-1])
+        if outlier_count == 0:
+            return self._quantize_to_segment(
+                states,
+                bits=regular_bits,
+                name=name,
+                quantizer_kind="mse",
+                layer_idx=layer_idx,
+            )
+        outlier_indices = self._select_outlier_channels(
+            states,
+            outlier_count,
+            regular_bits=regular_bits,
+            outlier_bits=outlier_bits,
+            name=name,
+            quantizer_kind="mse",
+            layer_idx=layer_idx,
+        )
+        original_shape = tuple(states.shape)
+        all_indices = torch.arange(states.shape[-1], device=states.device, dtype=torch.long)
+        regular_mask = torch.ones(states.shape[-1], device=states.device, dtype=torch.bool)
+        regular_mask[outlier_indices] = False
+        regular_indices = all_indices[regular_mask]
+        regular_segment = self._quantize_to_segment(
+            states.index_select(-1, regular_indices),
+            bits=regular_bits,
+            name=f"{name}_regular",
+            quantizer_kind="mse",
+            layer_idx=layer_idx,
+        )
+        outlier_segment = self._quantize_to_segment(
+            states.index_select(-1, outlier_indices),
+            bits=outlier_bits,
+            name=f"{name}_outlier",
+            quantizer_kind="outlier_hadamard_mse",
+            layer_idx=layer_idx,
+        )
+        return OutlierMSESegment(
+            regular=regular_segment,
+            outlier=outlier_segment,
+            regular_indices=regular_indices.to(dtype=torch.int16),
+            outlier_indices=outlier_indices.to(dtype=torch.int16),
+            shape=original_shape,
+            dtype=states.dtype,
+            requested_bits=float(bits),
+            policy=self._outlier_policy_for(name),
+        )
+
+    def _quantize_regular_attention_scale_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+        query_states: torch.Tensor | None,
+        key_states_for_attention: torch.Tensor | None,
+        scaling: float,
+    ) -> CacheSegment:
+        regular_bits, outlier_bits, outlier_count = self._resolve_effective_bit_allocation(bits, states.shape[-1])
+        if outlier_count == 0:
+            return self._quantize_attention_scale_to_segment(
+                states,
+                bits=regular_bits,
+                name=name,
+                layer_idx=layer_idx,
+                query_states=query_states,
+                scaling=scaling,
+            )
+        outlier_indices = self._select_outlier_channels(
+            states,
+            outlier_count,
+            regular_bits=regular_bits,
+            outlier_bits=outlier_bits,
+            name=name,
+            quantizer_kind="mse",
+            layer_idx=layer_idx,
+            query_states=query_states,
+            key_states_for_attention=key_states_for_attention,
+            scaling=scaling,
+        )
+        original_shape = tuple(states.shape)
+        all_indices = torch.arange(states.shape[-1], device=states.device, dtype=torch.long)
+        regular_mask = torch.ones(states.shape[-1], device=states.device, dtype=torch.bool)
+        regular_mask[outlier_indices] = False
+        regular_indices = all_indices[regular_mask]
+        regular_segment = self._quantize_attention_scale_to_segment(
+            states.index_select(-1, regular_indices),
+            bits=regular_bits,
+            name=f"{name}_regular",
+            layer_idx=layer_idx,
+            query_states=query_states.index_select(-1, regular_indices) if query_states is not None else None,
+            scaling=scaling,
+        )
+        outlier_segment = self._quantize_to_segment(
+            states.index_select(-1, outlier_indices),
+            bits=outlier_bits,
+            name=f"{name}_outlier",
+            quantizer_kind="mse",
+            layer_idx=layer_idx,
+        )
+        return OutlierMSESegment(
+            regular=regular_segment,
+            outlier=outlier_segment,
+            regular_indices=regular_indices.to(dtype=torch.int16),
+            outlier_indices=outlier_indices.to(dtype=torch.int16),
+            shape=original_shape,
+            dtype=states.dtype,
+            requested_bits=float(bits),
+            policy=self._outlier_policy_for(name),
+        )
+
+    def _quantize_adaptive_regular_gain_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+        query_states: torch.Tensor | None,
+        key_states_for_attention: torch.Tensor | None,
+        scaling: float,
+    ) -> CacheSegment:
+        baseline_segment = self._quantize_effective_to_segment(
+            states,
+            bits=bits,
+            name=name,
+            quantizer_kind="mse",
+            layer_idx=layer_idx,
+            allow_token_protection=False,
+            query_states=query_states,
+            key_states_for_attention=key_states_for_attention,
+            scaling=scaling,
+        )
+        gain_segment = self._quantize_effective_to_segment(
+            states,
+            bits=bits,
+            name=name,
+            quantizer_kind="regular_gain_mse",
+            layer_idx=layer_idx,
+            allow_token_protection=False,
+            query_states=query_states,
+            key_states_for_attention=key_states_for_attention,
+            scaling=scaling,
+        )
+        states_f = states.detach().to(dtype=torch.float32)
+        baseline_hat = self._decode_segment(baseline_segment, name=name, layer_idx=layer_idx).to(dtype=torch.float32)
+        gain_hat = self._decode_segment(gain_segment, name=name, layer_idx=layer_idx).to(dtype=torch.float32)
+        baseline_error = torch.mean((states_f - baseline_hat) ** 2)
+        gain_error = torch.mean((states_f - gain_hat) ** 2)
+        if bool(gain_error < baseline_error):
+            return gain_segment
+        return baseline_segment
+
+    def _quantize_attention_adaptive_regular_gain_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+        query_states: torch.Tensor | None,
+        key_states_for_attention: torch.Tensor | None,
+        scaling: float,
+    ) -> CacheSegment:
+        baseline_segment = self._quantize_effective_to_segment(
+            states,
+            bits=bits,
+            name=name,
+            quantizer_kind="mse",
+            layer_idx=layer_idx,
+            allow_token_protection=False,
+            query_states=query_states,
+            key_states_for_attention=key_states_for_attention,
+            scaling=scaling,
+        )
+        gain_segment = self._quantize_effective_to_segment(
+            states,
+            bits=bits,
+            name=name,
+            quantizer_kind="regular_gain_mse",
+            layer_idx=layer_idx,
+            allow_token_protection=False,
+            query_states=query_states,
+            key_states_for_attention=key_states_for_attention,
+            scaling=scaling,
+        )
+        baseline_hat = self._decode_segment(baseline_segment, name=name, layer_idx=layer_idx)
+        gain_hat = self._decode_segment(gain_segment, name=name, layer_idx=layer_idx)
+        baseline_error = self._attention_auto_mse_error(
+            states,
+            baseline_hat,
+            name=name,
+            query_states=query_states,
+            key_states_for_attention=key_states_for_attention,
+            scaling=scaling,
+        )
+        gain_error = self._attention_auto_mse_error(
+            states,
+            gain_hat,
+            name=name,
+            query_states=query_states,
+            key_states_for_attention=key_states_for_attention,
+            scaling=scaling,
+        )
+        if gain_error < baseline_error:
+            return gain_segment
+        return baseline_segment
+
+    def _quantize_rms_preconditioned_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: int,
+        name: str,
+        layer_idx: int,
+        inner_quantizer_kind: str,
+    ) -> CacheSegment:
+        if states.shape[-2] <= 1:
+            return self._quantize_to_segment(
+                states,
+                bits=bits,
+                name=f"{name}_rms_base",
+                quantizer_kind=inner_quantizer_kind,
+                layer_idx=layer_idx,
+            )
+        rms = states.detach().to(dtype=torch.float32).square().mean(dim=tuple(range(states.ndim - 1))).sqrt()
+        rms = rms.clamp_min(torch.finfo(torch.float32).eps)
+        geo = torch.exp(torch.log(rms).mean()).clamp_min(torch.finfo(torch.float32).eps)
+        scales = (rms / geo).to(device=states.device, dtype=states.dtype)
+        residual_segment = self._quantize_to_segment(
+            states / scales,
+            bits=bits,
+            name=f"{name}_rms",
+            quantizer_kind=inner_quantizer_kind,
+            layer_idx=layer_idx,
+        )
+        return RmsScaledSegment(
+            scales=scales.detach(),
+            residual=residual_segment,
+            shape=tuple(states.shape),
+            dtype=states.dtype,
+            bits=bits,
+        )
+
+    @staticmethod
+    def _head_rotation_index(name: str) -> int:
+        marker = "_head"
+        if marker not in name:
+            return 0
+        tail = name.split(marker, 1)[1]
+        digits = []
+        for char in tail:
+            if not char.isdigit():
+                break
+            digits.append(char)
+        if not digits:
+            return 0
+        return int("".join(digits)) + 1
+
+    def _quantize_head_rotation_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+    ) -> CacheSegment:
+        if states.ndim != 4 or states.shape[-3] <= 1:
+            return self._quantize_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind="mse",
+                layer_idx=layer_idx,
+                allow_token_protection=False,
+            )
+
+        head_segments: list[CacheSegment] = []
+        num_heads = states.shape[-3]
+        for head_idx in range(num_heads):
+            head_states = states.index_select(-3, torch.tensor([head_idx], device=states.device)).squeeze(-3)
+            head_segments.append(
+                self._quantize_effective_to_segment(
+                    head_states,
+                    bits=bits,
+                    name=f"{name}_head{head_idx}",
+                    quantizer_kind="mse",
+                    layer_idx=layer_idx,
+                    allow_token_protection=False,
+                )
+            )
+        return HeadRotationMSESegment(
+            head_segments=tuple(head_segments),
+            shape=tuple(states.shape),
+            dtype=states.dtype,
+            bits=float(bits),
+        )
+
+    def _head_hadamard_matrix(
+        self,
+        states: torch.Tensor,
+        *,
+        name: str,
+        layer_idx: int,
+    ) -> torch.Tensor | None:
+        if states.ndim != 4:
+            return None
+        num_heads = states.shape[-3]
+        if num_heads <= 1 or num_heads & (num_heads - 1):
+            return None
+        seed = self.config.seed + 1_000 * layer_idx + (0 if name == "key" else 500) + 31_337
+        return hadamard_orthogonal(num_heads, device=states.device, dtype=states.dtype, seed=seed)
+
+    def _apply_head_hadamard_transform(self, states: torch.Tensor, *, name: str, layer_idx: int) -> torch.Tensor:
+        transform = self._head_hadamard_matrix(states, name=name, layer_idx=layer_idx)
+        if transform is None:
+            return states
+        return torch.einsum("ij,bjsd->bisd", transform, states)
+
+    def _inverse_head_hadamard_transform(self, states: torch.Tensor, *, name: str, layer_idx: int) -> torch.Tensor:
+        transform = self._head_hadamard_matrix(states, name=name, layer_idx=layer_idx)
+        if transform is None:
+            return states
+        return torch.einsum("ji,bjsd->bisd", transform, states)
+
+    def _quantize_head_hadamard_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+    ) -> CacheSegment:
+        if self._head_hadamard_matrix(states, name=name, layer_idx=layer_idx) is None:
+            return self._quantize_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind="mse",
+                layer_idx=layer_idx,
+                allow_token_protection=False,
+            )
+        transformed = self._apply_head_hadamard_transform(states, name=name, layer_idx=layer_idx)
+        residual = self._quantize_effective_to_segment(
+            transformed,
+            bits=bits,
+            name=f"{name}_head_hadamard",
+            quantizer_kind="mse",
+            layer_idx=layer_idx,
+            allow_token_protection=False,
+        )
+        return HeadHadamardSegment(
+            residual=residual,
+            shape=tuple(states.shape),
+            dtype=states.dtype,
+            bits=float(bits),
+        )
+
+    def _hadamard_residual_matrix(
+        self,
+        dimension: int,
+        *,
+        device: torch.device,
+        dtype: torch.dtype,
+        name: str,
+        layer_idx: int,
+    ) -> torch.Tensor:
+        if dimension & (dimension - 1):
+            raise ValueError("hadamard_residual_mse requires a power-of-two head dimension")
+        seed = self.config.seed + 1_000 * layer_idx + (0 if name == "key" else 500) + 41_771
+        return hadamard_orthogonal(dimension, device=device, dtype=dtype, seed=seed)
+
+    def _quantize_hadamard_residual_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+    ) -> CacheSegment:
+        base_bits, _, residual_count = self._resolve_effective_bit_allocation(bits, states.shape[-1])
+        if residual_count == 0:
+            return self._quantize_to_segment(
+                states,
+                bits=base_bits,
+                name=name,
+                quantizer_kind="mse",
+                layer_idx=layer_idx,
+            )
+        dimension = states.shape[-1]
+        if dimension & (dimension - 1):
+            return self._quantize_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind="mse",
+                layer_idx=layer_idx,
+                allow_token_protection=False,
+            )
+        base_segment = self._quantize_to_segment(
+            states,
+            bits=base_bits,
+            name=f"{name}_hadamard_residual_base",
+            quantizer_kind="mse",
+            layer_idx=layer_idx,
+        )
+        base_hat = self._decode_segment(base_segment, name=f"{name}_hadamard_residual_base", layer_idx=layer_idx)
+        residual = states.detach().to(dtype=torch.float32) - base_hat.detach().to(dtype=torch.float32)
+        flat_residual = residual.reshape(-1, dimension)
+        residual_norms = torch.linalg.vector_norm(flat_residual, dim=-1, keepdim=True)
+        safe_norms = residual_norms.clamp_min(torch.finfo(torch.float32).eps)
+        residual_unit = flat_residual / safe_norms
+        transform = self._hadamard_residual_matrix(
+            dimension,
+            device=states.device,
+            dtype=states.dtype,
+            name=name,
+            layer_idx=layer_idx,
+        )
+        coeffs = residual_unit.to(device=states.device, dtype=states.dtype) @ transform.T
+        scores = coeffs.detach().abs().to(dtype=torch.float32).mean(dim=0)
+        residual_indices = torch.topk(scores, k=residual_count, largest=True, sorted=False).indices
+        selected = coeffs.index_select(-1, residual_indices)
+        signs = (selected >= 0).to(dtype=torch.int16)
+        scales = selected.detach().abs().to(dtype=torch.float32).mean(dim=-1)
+        scales = (scales * residual_norms.squeeze(-1)).reshape(states.shape[:-1]).to(device=states.device, dtype=states.dtype)
+        return HadamardResidualSegment(
+            base=base_segment,
+            packed_residual_signs=pack_indices(signs.reshape(*states.shape[:-1], residual_count), 1),
+            residual_scales=scales.detach(),
+            residual_indices=residual_indices.to(dtype=torch.int16).detach(),
+            shape=tuple(states.shape),
+            dtype=states.dtype,
+            base_bits=base_bits,
+            requested_bits=float(bits),
+        )
+
+    def _quantize_attention_hadamard_residual_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+        query_states: torch.Tensor | None,
+        key_states_for_attention: torch.Tensor | None,
+        scaling: float,
+    ) -> CacheSegment:
+        candidate_kinds = ("mse", "hadamard_residual_mse")
+        best_segment: CacheSegment | None = None
+        best_error: float | None = None
+        for candidate_kind in candidate_kinds:
+            segment = self._quantize_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind=candidate_kind,
+                layer_idx=layer_idx,
+                allow_token_protection=False,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+            decoded = self._decode_segment(segment, name=name, layer_idx=layer_idx)
+            error = self._attention_auto_mse_error(
+                states,
+                decoded,
+                name=name,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+            if best_error is None or error < best_error:
+                best_error = error
+                best_segment = segment
+        if best_segment is None:
+            raise RuntimeError("attention_hadamard_residual_mse did not produce a candidate segment")
+        return best_segment
+
+    def _quantize_attention_weighted_hadamard_residual_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+        query_states: torch.Tensor | None,
+        key_states_for_attention: torch.Tensor | None,
+        scaling: float,
+    ) -> CacheSegment:
+        base_bits, _, residual_count = self._resolve_effective_bit_allocation(bits, states.shape[-1])
+        if residual_count == 0:
+            return self._quantize_to_segment(
+                states,
+                bits=base_bits,
+                name=name,
+                quantizer_kind="mse",
+                layer_idx=layer_idx,
+            )
+        dimension = states.shape[-1]
+        if (
+            name != "key"
+            or query_states is None
+            or states.ndim != 4
+            or query_states.ndim != 4
+            or dimension & (dimension - 1)
+            or query_states.shape[0] != states.shape[0]
+            or query_states.shape[1] % states.shape[1] != 0
+            or query_states.shape[-1] != dimension
+        ):
+            return self._quantize_hadamard_residual_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                layer_idx=layer_idx,
+            )
+
+        base_segment = self._quantize_to_segment(
+            states,
+            bits=base_bits,
+            name=f"{name}_attention_weighted_hadamard_residual_base",
+            quantizer_kind="mse",
+            layer_idx=layer_idx,
+        )
+        base_hat = self._decode_segment(
+            base_segment,
+            name=f"{name}_attention_weighted_hadamard_residual_base",
+            layer_idx=layer_idx,
+        )
+        residual = states.detach().to(dtype=torch.float32) - base_hat.detach().to(dtype=torch.float32)
+        flat_residual = residual.reshape(-1, dimension)
+        residual_norms = torch.linalg.vector_norm(flat_residual, dim=-1, keepdim=True)
+        safe_norms = residual_norms.clamp_min(torch.finfo(torch.float32).eps)
+        residual_unit = flat_residual / safe_norms
+        transform = self._hadamard_residual_matrix(
+            dimension,
+            device=states.device,
+            dtype=states.dtype,
+            name=name,
+            layer_idx=layer_idx,
+        )
+        coeffs = residual_unit.to(device=states.device, dtype=states.dtype) @ transform.T
+        coeff_abs = coeffs.reshape(states.shape).detach().abs().to(dtype=torch.float32)
+
+        query_tokens = min(self.config.attention_error_query_tokens, query_states.shape[-2])
+        query_focus = query_states[..., -query_tokens:, :]
+        bsz, num_query_heads, _, head_dim = query_focus.shape
+        num_key_heads = states.shape[1]
+        num_groups = num_query_heads // num_key_heads
+        query_grouped = query_focus.reshape(bsz, num_key_heads, num_groups, query_tokens, head_dim)
+        query_coeff_abs = (query_grouped.to(dtype=states.dtype) @ transform.T).detach().abs().to(dtype=torch.float32)
+
+        key_reference = key_states_for_attention if key_states_for_attention is not None else states
+        if key_reference.shape != states.shape:
+            key_reference = states
+        key_scores = self._grouped_attention_scores(query_states, key_reference, scaling=scaling)
+        probs = self._causal_attention_probs(key_scores, key_len=states.shape[-2]).detach().to(dtype=torch.float32)
+        scores = torch.einsum("bhgqs,bhgqd,bhsd->d", probs, query_coeff_abs, coeff_abs)
+        residual_indices = torch.topk(scores, k=residual_count, largest=True, sorted=False).indices.sort().values
+        selected = coeffs.index_select(-1, residual_indices)
+        signs = (selected >= 0).to(dtype=torch.int16)
+        scales = selected.detach().abs().to(dtype=torch.float32).mean(dim=-1)
+        scales = (scales * residual_norms.squeeze(-1)).reshape(states.shape[:-1]).to(device=states.device, dtype=states.dtype)
+        return HadamardResidualSegment(
+            base=base_segment,
+            packed_residual_signs=pack_indices(signs.reshape(*states.shape[:-1], residual_count), 1),
+            residual_scales=scales.detach(),
+            residual_indices=residual_indices.to(dtype=torch.int16).detach(),
+            shape=tuple(states.shape),
+            dtype=states.dtype,
+            base_bits=base_bits,
+            requested_bits=float(bits),
+        )
+
+    def _quantize_attention_outlier_hadamard_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+        query_states: torch.Tensor | None,
+        key_states_for_attention: torch.Tensor | None,
+        scaling: float,
+    ) -> CacheSegment:
+        candidate_kinds = ("mse", "outlier_hadamard_mse")
+        best_segment: CacheSegment | None = None
+        best_error: float | None = None
+        for candidate_kind in candidate_kinds:
+            segment = self._quantize_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind=candidate_kind,
+                layer_idx=layer_idx,
+                allow_token_protection=False,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+            decoded = self._decode_segment(segment, name=name, layer_idx=layer_idx)
+            error = self._attention_auto_mse_error(
+                states,
+                decoded,
+                name=name,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+            if best_error is None or error < best_error:
+                best_error = error
+                best_segment = segment
+        if best_segment is None:
+            raise RuntimeError("attention_outlier_hadamard_mse did not produce a candidate segment")
+        return best_segment
+
+    def _quantize_entropy_guarded_outlier_hadamard_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+        query_states: torch.Tensor | None,
+        key_states_for_attention: torch.Tensor | None,
+        scaling: float,
+    ) -> CacheSegment:
+        if name != "value":
+            return self._quantize_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind="mse",
+                layer_idx=layer_idx,
+                allow_token_protection=False,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+
+        entropy_ratio = self._attention_entropy_ratio(
+            query_states=query_states,
+            key_states=key_states_for_attention,
+            scaling=scaling,
+            query_tokens=self.config.attention_error_query_tokens,
+        )
+        if entropy_ratio is None or entropy_ratio > self.config.attention_entropy_threshold:
+            return self._quantize_effective_to_segment(
+                states,
+                bits=bits,
+                name=name,
+                quantizer_kind="mse",
+                layer_idx=layer_idx,
+                allow_token_protection=False,
+                query_states=query_states,
+                key_states_for_attention=key_states_for_attention,
+                scaling=scaling,
+            )
+        return self._quantize_effective_to_segment(
+            states,
+            bits=bits,
+            name=name,
+            quantizer_kind="outlier_hadamard_mse",
+            layer_idx=layer_idx,
+            allow_token_protection=False,
+            query_states=query_states,
+            key_states_for_attention=key_states_for_attention,
+            scaling=scaling,
+        )
+
+    def _quantize_rms_regular_gain_effective_to_segment(
+        self,
+        states: torch.Tensor,
+        *,
+        bits: float,
+        name: str,
+        layer_idx: int,
+    ) -> CacheSegment:
+        regular_bits, outlier_bits, outlier_count = self._resolve_effective_bit_allocation(bits, states.shape[-1])
+        if outlier_count == 0:
+            return self._quantize_rms_preconditioned_to_segment(
+                states,
+                bits=regular_bits,
+                name=name,
+                layer_idx=layer_idx,
+                inner_quantizer_kind="mse",
+            )
+        outlier_indices = self._select_outlier_channels(
+            states,
+            outlier_count,
+            regular_bits=regular_bits,
+            outlier_bits=outlier_bits,
+            name=name,
+            quantizer_kind="mse",
+            layer_idx=layer_idx,
+        )
+        original_shape = tuple(states.shape)
+        all_indices = torch.arange(states.shape[-1], device=states.device, dtype=torch.long)
+        regular_mask = torch.ones(states.shape[-1], device=states.device, dtype=torch.bool)
+        regular_mask[outlier_indices] = False
+        regular_indices = all_indices[regular_mask]
+        regular_segment = self._quantize_rms_preconditioned_to_segment(
+            states.index_select(-1, regular_indices),
+            bits=regular_bits,
+            name=f"{name}_regular",
+            layer_idx=layer_idx,
+            inner_quantizer_kind="gain_mse",
+        )
+        outlier_segment = self._quantize_rms_preconditioned_to_segment(
+            states.index_select(-1, outlier_indices),
+            bits=outlier_bits,
+            name=f"{name}_outlier",
+            layer_idx=layer_idx,
+            inner_quantizer_kind="mse",
+        )
+        return OutlierMSESegment(
+            regular=regular_segment,
+            outlier=outlier_segment,
+            regular_indices=regular_indices.to(dtype=torch.int16),
+            outlier_indices=outlier_indices.to(dtype=torch.int16),
+            shape=original_shape,
+            dtype=states.dtype,
+            requested_bits=float(bits),
+            policy=self._outlier_policy_for(name),
+        )
+
     def _configured_key_bits(self, layer_idx: int) -> float:
         return self._configured_bits(self.config.key_bits, self.config.layer_key_bits, layer_idx, "key")
 
@@ -1811,6 +4598,52 @@ class TurboQuantDynamicCache(Cache):
 
     def _configured_value_quantizer(self, layer_idx: int) -> str:
         return self._configured_quantizer(self.config.value_quantizer, self.config.layer_value_quantizers, layer_idx, "value")
+
+    def _configured_rotation_index(self, layer_idx: int, name: str) -> int:
+        if name == "key" or name.startswith("key_"):
+            schedule = self.config.layer_key_rotation_indices
+            schedule_name = "key"
+        elif name == "value" or name.startswith("value_"):
+            schedule = self.config.layer_value_rotation_indices
+            schedule_name = "value"
+        else:
+            schedule = None
+            schedule_name = name
+        if schedule is None:
+            return 0
+        if layer_idx >= len(schedule):
+            raise ValueError(f"{schedule_name} layer rotation schedule has {len(schedule)} entries, missing layer {layer_idx}")
+        return int(schedule[layer_idx])
+
+    def _calibrated_rotation_matrix(
+        self,
+        layer_idx: int,
+        name: str,
+        dimension: int,
+        device: torch.device,
+        dtype: torch.dtype,
+    ) -> torch.Tensor:
+        if name == "key" or name.startswith("key_"):
+            schedule = self.config.layer_key_rotation_matrices
+            schedule_name = "key"
+        elif name == "value" or name.startswith("value_"):
+            schedule = self.config.layer_value_rotation_matrices
+            schedule_name = "value"
+        else:
+            schedule = None
+            schedule_name = name
+        if schedule is None:
+            seed = self.config.seed + 1_000 * layer_idx + (0 if schedule_name == "key" else 500)
+            return random_orthogonal(dimension, device=device, dtype=dtype, seed=seed)
+        if layer_idx >= len(schedule):
+            raise ValueError(f"{schedule_name} calibrated rotation schedule has {len(schedule)} entries, missing layer {layer_idx}")
+        matrix = torch.tensor(schedule[layer_idx], device=device, dtype=dtype)
+        if tuple(matrix.shape) != (dimension, dimension):
+            raise ValueError(
+                f"{schedule_name} calibrated rotation for layer {layer_idx} must have shape {(dimension, dimension)}, "
+                f"got {tuple(matrix.shape)}"
+            )
+        return matrix
 
     @staticmethod
     def _configured_bits(default_bits: float, schedule: tuple[float, ...] | None, layer_idx: int, name: str) -> float:
@@ -1920,7 +4753,15 @@ class TurboQuantDynamicCache(Cache):
                         scaling=scaling,
                     )
 
-        if should_quantize and self.config.outlier_policy in {"joint_error_gain", "joint_attention_error_gain"}:
+        if should_quantize and key_quantizer == value_quantizer == "shared_rotated_outlier_mse":
+            key_segment, value_segment = self._quantize_shared_rotated_outlier_effective_to_segments(
+                key_states,
+                value_states,
+                key_bits=key_bits,
+                value_bits=value_bits,
+                layer_idx=layer_idx,
+            )
+        elif should_quantize and self.config.outlier_policy in {"joint_error_gain", "joint_attention_error_gain"}:
             key_segment, value_segment = self._quantize_joint_effective_to_segments(
                 key_states,
                 value_states,
@@ -2032,6 +4873,11 @@ class TurboQuantDynamicCache(Cache):
                     outlier_counts.append(int(segment.outlier_indices.numel()))
                     regular_bits.append(segment.regular_bits)
                     outlier_bits.append(segment.outlier_bits)
+                elif isinstance(segment, RotatedOutlierMSESegment):
+                    effective_bits.append(segment.effective_index_bits)
+                    outlier_counts.append(int(segment.outlier_indices.numel()))
+                    regular_bits.append(segment.regular_bits)
+                    outlier_bits.append(segment.outlier_bits)
                 elif isinstance(segment, HeadAdaptiveOutlierMSESegment):
                     effective_bits.append(segment.effective_index_bits)
                     for head_segment in segment.head_segments:
@@ -2042,6 +4888,29 @@ class TurboQuantDynamicCache(Cache):
                     effective_bits.append(segment.effective_token_bits)
                 elif isinstance(segment, CenteredSegment):
                     effective_bits.append(float(segment.bits))
+                elif isinstance(segment, OutlierHadamardSegment):
+                    effective_bits.append(float(segment.bits))
+                elif isinstance(segment, RmsScaledSegment):
+                    effective_bits.append(float(segment.bits))
+                elif isinstance(segment, VectorAdaptiveRotationSegment):
+                    effective_bits.append(float(segment.bits))
+                elif isinstance(segment, HeadRotationMSESegment):
+                    effective_bits.append(float(segment.bits))
+                    for head_segment in segment.head_segments:
+                        head_type = type(head_segment).__name__
+                        segment_types[head_type] = segment_types.get(head_type, 0) + 1
+                        if isinstance(head_segment, OutlierMSESegment):
+                            outlier_counts.append(int(head_segment.outlier_indices.numel()))
+                            regular_bits.append(head_segment.regular_bits)
+                            outlier_bits.append(head_segment.outlier_bits)
+                        elif isinstance(head_segment, RotatedOutlierMSESegment):
+                            outlier_counts.append(int(head_segment.outlier_indices.numel()))
+                            regular_bits.append(head_segment.regular_bits)
+                            outlier_bits.append(head_segment.outlier_bits)
+                elif isinstance(segment, HeadHadamardSegment):
+                    effective_bits.append(float(segment.bits))
+                elif isinstance(segment, HadamardResidualSegment):
+                    effective_bits.append(segment.effective_index_bits)
                 elif isinstance(segment, (PackedMSESegment, PackedProdSegment, UniformAffineSegment)):
                     effective_bits.append(float(segment.bits))
 
@@ -2061,8 +4930,16 @@ class TurboQuantDynamicCache(Cache):
             ),
             "layer_key_bits": list(self.config.layer_key_bits) if self.config.layer_key_bits is not None else None,
             "layer_value_bits": list(self.config.layer_value_bits) if self.config.layer_value_bits is not None else None,
+            "layer_key_rotation_indices": (
+                list(self.config.layer_key_rotation_indices) if self.config.layer_key_rotation_indices is not None else None
+            ),
+            "layer_value_rotation_indices": (
+                list(self.config.layer_value_rotation_indices) if self.config.layer_value_rotation_indices is not None else None
+            ),
             "layer_key_channel_scores": self.config.layer_key_channel_scores is not None,
             "layer_value_channel_scores": self.config.layer_value_channel_scores is not None,
+            "layer_key_rotation_matrices": self.config.layer_key_rotation_matrices is not None,
+            "layer_value_rotation_matrices": self.config.layer_value_rotation_matrices is not None,
             "sensitivity_score_power": self.config.sensitivity_score_power,
             "token_protection_policy": self.config.token_protection_policy,
             "protected_start_tokens": self.config.protected_start_tokens,
@@ -2070,6 +4947,9 @@ class TurboQuantDynamicCache(Cache):
             "token_protection_target_ratio": self.config.token_protection_target_ratio,
             "token_protection_targets": self.config.token_protection_targets,
             "attention_error_query_tokens": self.config.attention_error_query_tokens,
+            "attention_entropy_threshold": self.config.attention_entropy_threshold,
+            "rotation_bank_size": self.config.rotation_bank_size,
+            "outlier_hadamard_block_size": self.config.outlier_hadamard_block_size,
         }
 
     def to_legacy_cache(self) -> tuple[tuple[torch.Tensor, torch.Tensor], ...]:
@@ -2163,8 +5043,12 @@ def make_kv_config_from_effective_bits(
     layer_value_quantizers: tuple[str, ...] | None = None,
     layer_key_bits: tuple[float, ...] | None = None,
     layer_value_bits: tuple[float, ...] | None = None,
+    layer_key_rotation_indices: tuple[int, ...] | None = None,
+    layer_value_rotation_indices: tuple[int, ...] | None = None,
     layer_key_channel_scores: tuple[tuple[float, ...], ...] | None = None,
     layer_value_channel_scores: tuple[tuple[float, ...], ...] | None = None,
+    layer_key_rotation_matrices: tuple[tuple[tuple[float, ...], ...], ...] | None = None,
+    layer_value_rotation_matrices: tuple[tuple[tuple[float, ...], ...], ...] | None = None,
     sensitivity_score_power: float = 1.0,
     token_protection_policy: str = "none",
     protected_start_tokens: int = 4,
@@ -2172,6 +5056,9 @@ def make_kv_config_from_effective_bits(
     token_protection_target_ratio: float | None = None,
     token_protection_targets: str = "both",
     attention_error_query_tokens: int = 1,
+    attention_entropy_threshold: float = 0.80,
+    rotation_bank_size: int = 4,
+    outlier_hadamard_block_size: int = 16,
 ) -> KVQuantConfig:
     """Create a KV cache config for integer or fractional effective bits."""
 
@@ -2191,8 +5078,12 @@ def make_kv_config_from_effective_bits(
         layer_value_quantizers=layer_value_quantizers,
         layer_key_bits=layer_key_bits,
         layer_value_bits=layer_value_bits,
+        layer_key_rotation_indices=layer_key_rotation_indices,
+        layer_value_rotation_indices=layer_value_rotation_indices,
         layer_key_channel_scores=layer_key_channel_scores,
         layer_value_channel_scores=layer_value_channel_scores,
+        layer_key_rotation_matrices=layer_key_rotation_matrices,
+        layer_value_rotation_matrices=layer_value_rotation_matrices,
         sensitivity_score_power=sensitivity_score_power,
         token_protection_policy=token_protection_policy,
         protected_start_tokens=protected_start_tokens,
@@ -2200,4 +5091,7 @@ def make_kv_config_from_effective_bits(
         token_protection_target_ratio=token_protection_target_ratio,
         token_protection_targets=token_protection_targets,
         attention_error_query_tokens=attention_error_query_tokens,
+        attention_entropy_threshold=attention_entropy_threshold,
+        rotation_bank_size=rotation_bank_size,
+        outlier_hadamard_block_size=outlier_hadamard_block_size,
     )
