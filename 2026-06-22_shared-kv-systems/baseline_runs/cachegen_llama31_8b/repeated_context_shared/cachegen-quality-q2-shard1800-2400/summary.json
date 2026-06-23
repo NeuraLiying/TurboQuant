@@ -1,0 +1,30 @@
+{
+  "groups": 150,
+  "records": 600,
+  "generate_quality": true,
+  "predictions_output": "/home/liying/projects/turboquant/2026-06-22_shared-kv-systems/baseline_runs/cachegen_llama31_8b/repeated_context_shared/cachegen-quality-q2-shard1800-2400/predictions.jsonl",
+  "shared_prefix_table_storage_nbytes": 35418013586,
+  "request_storage_nbytes": 20174228224,
+  "shared_total_storage_nbytes": 55592241810,
+  "fp16_shared_total_storage_nbytes": 262874230912,
+  "shared_total_savings_vs_fp16_shared": 0.788521523706863,
+  "mean_prefix_storage_saving": 0.8540563150917058,
+  "mean_encode_s": 0.3805439223380139,
+  "mean_decode_s": 0.47267272346653044,
+  "mean_rel_l2": 0.2602092117071152,
+  "max_rel_l2": 0.2612282931804657,
+  "score": 1.0,
+  "task_summaries": {
+    "passage_retrieval_en": {
+      "groups": 150,
+      "records": 600,
+      "shared_total_storage_nbytes": 55592241810,
+      "fp16_shared_total_storage_nbytes": 262874230912,
+      "shared_total_savings_vs_fp16_shared": 0.788521523706863,
+      "mean_prefix_storage_saving": 0.8540563150917058,
+      "mean_rel_l2": 0.2602092117071152,
+      "max_rel_l2": 0.2612282931804657,
+      "score": 1.0
+    }
+  }
+}

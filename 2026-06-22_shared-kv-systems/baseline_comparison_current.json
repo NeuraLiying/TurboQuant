@@ -1,0 +1,65 @@
+{
+  "fp16_shared_reference_storage_nbytes": 959330370048,
+  "rows": [
+    {
+      "method": "FP16 shared reference",
+      "status": "valid",
+      "records": 2400,
+      "score": 0.5873738555804158,
+      "score_percent": 58.73738555804158,
+      "shared_total_storage_nbytes": 959330370048,
+      "shared_total_storage_GB_decimal": 959.330370048,
+      "storage_saving_vs_fp16_shared": 0.0,
+      "avg_latency_seconds": 0.3364930051957102,
+      "notes": ""
+    },
+    {
+      "method": "Guarded shared-prefix TurboQuant 3.5b (ours)",
+      "status": "valid",
+      "records": 2400,
+      "score": 0.5906820330574996,
+      "score_percent": 59.068203305749954,
+      "shared_total_storage_nbytes": 404597824000,
+      "shared_total_storage_GB_decimal": 404.597824,
+      "storage_saving_vs_fp16_shared": 0.5782497493749146,
+      "avg_latency_seconds": 0.37720474279834887,
+      "notes": "candidate; fixed first512/last2048 FP16 guards"
+    },
+    {
+      "method": "SpectrumKV shared sink-b0.5",
+      "status": "valid",
+      "records": 2400,
+      "score": 0.5890363711935362,
+      "score_percent": 58.903637119353625,
+      "shared_total_storage_nbytes": 498130131200,
+      "shared_total_storage_GB_decimal": 498.1301312,
+      "storage_saving_vs_fp16_shared": 0.480752255164114,
+      "avg_latency_seconds": 0.5198785990932568,
+      "notes": ""
+    },
+    {
+      "method": "CacheGen q2 shared-prefix quality",
+      "status": "valid",
+      "records": 2400,
+      "score": 0.5698902732672554,
+      "score_percent": 56.98902732672554,
+      "shared_total_storage_nbytes": 170160796496,
+      "shared_total_storage_GB_decimal": 170.160796496,
+      "storage_saving_vs_fp16_shared": 0.8226254460311874,
+      "avg_latency_seconds": 3.2768232675616553,
+      "notes": "mean_rel_l2=0.257801"
+    },
+    {
+      "method": "SKVQ packed k2-v2-g128-w128-clip-sink5",
+      "status": "invalid_quality",
+      "records": 2400,
+      "score": 0.0002777777777777778,
+      "score_percent": 0.027777777777777776,
+      "shared_total_storage_nbytes": 182234509824,
+      "shared_total_storage_GB_decimal": 182.234509824,
+      "storage_saving_vs_fp16_shared": 0.810039882491282,
+      "avg_latency_seconds": 5.658851192839211,
+      "notes": "completed packed/dequant path degenerates; not paper fake-quant path"
+    }
+  ]
+}

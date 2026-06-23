@@ -1,0 +1,36 @@
+{
+  "groups": 150,
+  "records": 600,
+  "shared_prefix_table_storage_nbytes": 41962699228,
+  "request_storage_nbytes": 8330562304,
+  "shared_total_storage_nbytes": 50293261532,
+  "fp16_shared_total_storage_nbytes": 295708291200,
+  "shared_total_savings_vs_fp16_shared": 0.8299227210440828,
+  "mean_prefix_storage_saving": 0.8539691956629085,
+  "mean_encode_s": 0.4324214907487233,
+  "mean_decode_s": 0.5808614314999432,
+  "mean_rel_l2": 0.25811334073543546,
+  "max_rel_l2": 0.2612241804599762,
+  "task_summaries": {
+    "musique": {
+      "groups": 100,
+      "records": 400,
+      "shared_total_storage_nbytes": 31751169459,
+      "fp16_shared_total_storage_nbytes": 207494073088,
+      "shared_total_savings_vs_fp16_shared": 0.8469779450252825,
+      "mean_prefix_storage_saving": 0.8539331249863396,
+      "mean_rel_l2": 0.2570833146572113,
+      "max_rel_l2": 0.2612241804599762
+    },
+    "passage_retrieval_en": {
+      "groups": 50,
+      "records": 200,
+      "shared_total_storage_nbytes": 18542092073,
+      "fp16_shared_total_storage_nbytes": 88214218112,
+      "shared_total_savings_vs_fp16_shared": 0.7898060826265185,
+      "mean_prefix_storage_saving": 0.8540413370160462,
+      "mean_rel_l2": 0.26017339289188385,
+      "max_rel_l2": 0.26072368025779724
+    }
+  }
+}

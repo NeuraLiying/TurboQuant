@@ -1,0 +1,26 @@
+{
+  "groups": 1,
+  "records": 4,
+  "shared_prefix_table_storage_nbytes": 211994634,
+  "request_storage_nbytes": 18874496,
+  "shared_total_storage_nbytes": 230869130,
+  "fp16_shared_total_storage_nbytes": 1470628032,
+  "shared_total_savings_vs_fp16_shared": 0.8430132399380239,
+  "mean_prefix_storage_saving": 0.8539733992423353,
+  "mean_encode_s": 0.4014096478931606,
+  "mean_decode_s": 0.35408784821629524,
+  "mean_rel_l2": 0.25932013988494873,
+  "max_rel_l2": 0.25932013988494873,
+  "task_summaries": {
+    "2wikimqa": {
+      "groups": 1,
+      "records": 4,
+      "shared_total_storage_nbytes": 230869130,
+      "fp16_shared_total_storage_nbytes": 1470628032,
+      "shared_total_savings_vs_fp16_shared": 0.8430132399380239,
+      "mean_prefix_storage_saving": 0.8539733992423353,
+      "mean_rel_l2": 0.25932013988494873,
+      "max_rel_l2": 0.25932013988494873
+    }
+  }
+}

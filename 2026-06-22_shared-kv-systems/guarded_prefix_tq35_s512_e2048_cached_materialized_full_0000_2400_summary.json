@@ -1,0 +1,247 @@
+{
+  "candidate_jsonl": "2026-06-22_shared-kv-systems/guarded_prefix_tq35_s512_e2048_cached_materialized_full_0000_2400.jsonl",
+  "reference_jsonl": "reproduce/runs/repeated_context/repeated_context_answer_preserving_qa_g4_fp16_prefix_shared_reference_full.jsonl",
+  "records": 2400,
+  "candidate_records": 2400,
+  "reference_records": 2400,
+  "groups": 600,
+  "candidate_score": 0.5906820330574996,
+  "reference_score": 0.5873738555804161,
+  "candidate_avg_latency_seconds": 0.37720474279834887,
+  "reference_avg_latency_seconds": 0.3364930051957102,
+  "score_mismatch_count": 105,
+  "prediction_mismatch_count": 233,
+  "score_mismatch_preview": [
+    {
+      "index": 1,
+      "candidate_score": 1.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "Ozalj.",
+      "reference_prediction": "Gyulafeh\u00e9rv\u00e1r, Transylvania."
+    },
+    {
+      "index": 14,
+      "candidate_score": 1.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "No",
+      "reference_prediction": "Yes"
+    },
+    {
+      "index": 21,
+      "candidate_score": 0.0,
+      "reference_score": 0.25,
+      "candidate_prediction": "George Sondes, 1st Earl of Feversham",
+      "reference_prediction": "Lewis Watson, 1st Earl of Rockingham"
+    },
+    {
+      "index": 45,
+      "candidate_score": 1.0,
+      "reference_score": 0.6666666666666666,
+      "candidate_prediction": "Marie of Hohenstaufen",
+      "reference_prediction": "Marie of Brabant"
+    },
+    {
+      "index": 46,
+      "candidate_score": 1.0,
+      "reference_score": 0.26666666666666666,
+      "candidate_prediction": "Marie of Hohenstaufen",
+      "reference_prediction": "Marie of Brabant, Queen of France's paternal grandmother is Marie of Brabant."
+    },
+    {
+      "index": 47,
+      "candidate_score": 1.0,
+      "reference_score": 0.6666666666666666,
+      "candidate_prediction": "Marie of Hohenstaufen",
+      "reference_prediction": "Marie of Brabant"
+    },
+    {
+      "index": 90,
+      "candidate_score": 0.3076923076923077,
+      "reference_score": 0.32,
+      "candidate_prediction": "Larry Cohen was born in 1936 and directed Hell Up In Harlem, while Edv\u012bns \u0160nore was born in 1974 and directed The Soviet",
+      "reference_prediction": "Larry Cohen was born in 1936 and directed Hell Up In Harlem in 1973. Edv\u012bns \u0160nore was born in 1974 and"
+    },
+    {
+      "index": 106,
+      "candidate_score": 0.0,
+      "reference_score": 1.0,
+      "candidate_prediction": "Joel The Lump Of Coal",
+      "reference_prediction": "Jugband Blues"
+    },
+    {
+      "index": 129,
+      "candidate_score": 1.0,
+      "reference_score": 0.6666666666666666,
+      "candidate_prediction": "Goring-on-Thames, Oxfordshire.",
+      "reference_prediction": "Goring-on-Thames"
+    },
+    {
+      "index": 130,
+      "candidate_score": 1.0,
+      "reference_score": 0.6666666666666666,
+      "candidate_prediction": "Goring-on-Thames, Oxfordshire",
+      "reference_prediction": "Goring-on-Thames"
+    }
+  ],
+  "prediction_mismatch_preview": [
+    {
+      "index": 1,
+      "candidate_score": 1.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "Ozalj.",
+      "reference_prediction": "Gyulafeh\u00e9rv\u00e1r, Transylvania."
+    },
+    {
+      "index": 11,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "The film Man At Bath is directed by Christophe Honor\u00e9.",
+      "reference_prediction": "The film Man At Bath is directed by Christophe Honor\u00e9, but the question asks about the director of the film, not the director of the film."
+    },
+    {
+      "index": 14,
+      "candidate_score": 1.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "No",
+      "reference_prediction": "Yes"
+    },
+    {
+      "index": 21,
+      "candidate_score": 0.0,
+      "reference_score": 0.25,
+      "candidate_prediction": "George Sondes, 1st Earl of Feversham",
+      "reference_prediction": "Lewis Watson, 1st Earl of Rockingham"
+    },
+    {
+      "index": 45,
+      "candidate_score": 1.0,
+      "reference_score": 0.6666666666666666,
+      "candidate_prediction": "Marie of Hohenstaufen",
+      "reference_prediction": "Marie of Brabant"
+    },
+    {
+      "index": 46,
+      "candidate_score": 1.0,
+      "reference_score": 0.26666666666666666,
+      "candidate_prediction": "Marie of Hohenstaufen",
+      "reference_prediction": "Marie of Brabant, Queen of France's paternal grandmother is Marie of Brabant."
+    },
+    {
+      "index": 47,
+      "candidate_score": 1.0,
+      "reference_score": 0.6666666666666666,
+      "candidate_prediction": "Marie of Hohenstaufen",
+      "reference_prediction": "Marie of Brabant"
+    },
+    {
+      "index": 56,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "Poland",
+      "reference_prediction": "United States"
+    },
+    {
+      "index": 61,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "Edward Buzzell",
+      "reference_prediction": "Barbara Hale"
+    },
+    {
+      "index": 88,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "The Soviet Story",
+      "reference_prediction": "Larry Cohen was born on July 15, 1936, and Edv\u012bns \u0160nore was born on March 21, 1974."
+    }
+  ],
+  "task_summaries": [
+    {
+      "task": "2wikimqa",
+      "records": 800,
+      "groups": 200,
+      "candidate_score": 0.46414508755133754,
+      "reference_score": 0.4573592304625199,
+      "score_delta": 0.006785857088817626,
+      "candidate_avg_latency_seconds": 0.28271219938702413,
+      "reference_avg_latency_seconds": 0.26258599434513596,
+      "latency_ratio": 1.0766461482154863,
+      "score_mismatch_count": 45,
+      "prediction_mismatch_count": 89,
+      "candidate_prefix_table_storage_nbytes": 94926090752,
+      "reference_prefix_table_storage_nbytes": 189515575808,
+      "prefix_table_savings_ratio": 0.49911193131602805,
+      "candidate_request_storage_nbytes": 3774637056,
+      "reference_request_storage_nbytes": 3794035712,
+      "candidate_shared_total_storage_nbytes": 98700727808,
+      "reference_shared_total_storage_nbytes": 193309611520,
+      "shared_total_savings_ratio": 0.48941634597518024,
+      "candidate_materialized_prefix_cache_nbytes": 123549515776
+    },
+    {
+      "task": "musique",
+      "records": 800,
+      "groups": 200,
+      "candidate_score": 0.3141510116211612,
+      "reference_score": 0.3097623362787283,
+      "score_delta": 0.004388675342432924,
+      "candidate_avg_latency_seconds": 0.5181646366167115,
+      "reference_avg_latency_seconds": 0.4479851487436099,
+      "latency_ratio": 1.1566558357345607,
+      "score_mismatch_count": 53,
+      "prediction_mismatch_count": 135,
+      "candidate_prefix_table_storage_nbytes": 147696427520,
+      "reference_prefix_table_storage_nbytes": 410935112192,
+      "prefix_table_savings_ratio": 0.6405845518233735,
+      "candidate_request_storage_nbytes": 4004144128,
+      "reference_request_storage_nbytes": 3997721600,
+      "candidate_shared_total_storage_nbytes": 151700571648,
+      "reference_shared_total_storage_nbytes": 414932833792,
+      "shared_total_savings_ratio": 0.6343972824188568,
+      "candidate_materialized_prefix_cache_nbytes": 343826235392
+    },
+    {
+      "task": "passage_retrieval_en",
+      "records": 800,
+      "groups": 200,
+      "candidate_score": 0.99375,
+      "reference_score": 0.995,
+      "score_delta": -0.0012499999999999734,
+      "candidate_avg_latency_seconds": 0.330737392391311,
+      "reference_avg_latency_seconds": 0.2989078724983847,
+      "latency_ratio": 1.1064860541372938,
+      "score_mismatch_count": 7,
+      "prediction_mismatch_count": 9,
+      "candidate_prefix_table_storage_nbytes": 127386114560,
+      "reference_prefix_table_storage_nbytes": 324277776896,
+      "prefix_table_savings_ratio": 0.6071697672922731,
+      "candidate_request_storage_nbytes": 26810409984,
+      "reference_request_storage_nbytes": 26810147840,
+      "candidate_shared_total_storage_nbytes": 154196524544,
+      "reference_shared_total_storage_nbytes": 351087924736,
+      "shared_total_savings_ratio": 0.5608036799899974,
+      "candidate_materialized_prefix_cache_nbytes": 257168900096
+    }
+  ],
+  "candidate_prefix_table_storage_nbytes": 370008632832,
+  "reference_prefix_table_storage_nbytes": 924728464896,
+  "prefix_table_savings_ratio": 0.5998732094035699,
+  "candidate_materialized_prefix_cache_nbytes": 724544651264,
+  "candidate_request_storage_nbytes": 34589191168,
+  "reference_request_storage_nbytes": 34601905152,
+  "candidate_shared_total_storage_nbytes": 404597824000,
+  "reference_shared_total_storage_nbytes": 959330370048,
+  "shared_total_savings_ratio": 0.5782497493749146,
+  "candidate_materialized_nbytes": 3733502820352,
+  "reference_materialized_nbytes": 3733515534336,
+  "candidate_metadata": {
+    "prefix_storage_mode": "turboquant",
+    "prefix_kv_bits": 3.5,
+    "prefix_key_bits": 3.5,
+    "prefix_value_bits": 3.5,
+    "prefix_key_quantizer": "mse",
+    "prefix_value_quantizer": "mse",
+    "prefix_raw_start_tokens": 512,
+    "prefix_raw_end_tokens": 2048
+  }
+}

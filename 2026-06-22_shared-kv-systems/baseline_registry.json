@@ -1,0 +1,53 @@
+{
+  "policy": "Publishable baseline numbers must come from official upstream code when an official repository exists.",
+  "external_baseline_root": "external_baselines",
+  "baselines": [
+    {
+      "method": "CacheGen",
+      "official_repo": "https://github.com/UChi-JCL/CacheGen",
+      "local_path": "external_baselines/CacheGen",
+      "commit": "6bed34ca9d495289955ed754cf2ad0c43346ee48",
+      "status": "cloned",
+      "entry_points": [
+        "run_cachegen.py",
+        "scripts/7b.sh",
+        "scripts/7b_baseline.sh",
+        "sigcomm_ae.md"
+      ],
+      "initial_notes": "Official repo is for CacheGen/LMCache KV streaming. Artifact scripts target LongChat, NarrativeQA, TriviaQA and require CacheGen environment plus torchac CUDA extension. Accuracy evaluation may require OPENAI_API_KEY for some scripts."
+    },
+    {
+      "method": "SKVQ",
+      "official_repo": "https://github.com/cat538/SKVQ",
+      "local_path": "external_baselines/SKVQ",
+      "commit": "fdfc7ec315c16293f68dd771850b47f5199787fc",
+      "status": "cloned",
+      "entry_points": [
+        "eval_longbench.py",
+        "eval_needle.py",
+        "eval_ppl.py",
+        "kernels/setup.py"
+      ],
+      "initial_notes": "Official LongBench entry exists and supports 2wikimqa, musique, and passage_retrieval_en. It uses hard-coded model and dataset path maps; running on our Llama-3.1-8B repeated-context slice requires an adapter/config patch that must not change SKVQ algorithm code."
+    },
+    {
+      "method": "SpectrumKV",
+      "official_repo": "https://github.com/YangSteve1223/kvcache-lab",
+      "local_path": "external_baselines/kvcache-lab",
+      "commit": "e108438df1d903c448a123a43276da88542559d1",
+      "status": "cloned",
+      "entry_points": [
+        "gpu-experiments/exp_spectrumkv_gpu.py",
+        "gpu-experiments/run_all_experiments.py",
+        "spectrumkv/core"
+      ],
+      "initial_notes": "Official repo includes SpectrumKV package, GPU experiments, and processed/raw experiment data. It targets WikiText-2 PPL, NIAH, and PD-disaggregated transfer policies rather than the current repeated-context QA dataset; alignment requires a documented adapter or a separate comparable slice."
+    }
+  ],
+  "paper_only_until_official_code_found": [
+    "KVTC",
+    "InnerQ",
+    "KVmix",
+    "TriAxialKV"
+  ]
+}

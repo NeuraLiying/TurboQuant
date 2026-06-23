@@ -1,0 +1,21 @@
+{
+  "dataset_key": "repeated_context_answer_preserving_qa_g4",
+  "full_dataset_len": 2400,
+  "start_index": 0,
+  "end_index": 8,
+  "groups": 2,
+  "rows": 8,
+  "dry_run": true,
+  "raw_prompt_tokens": 56780,
+  "prefix_shared_prompt_tokens": 14363,
+  "shared_prefix_tokens_sum": 14139,
+  "branch_cache_mode": "reference",
+  "prefix_storage_mode": "turboquant",
+  "prefix_kv_bits": 3.5,
+  "prefix_key_quantizer": "mse",
+  "prefix_value_quantizer": "mse",
+  "reference_attention_mode": "materialize",
+  "attn_implementation": "sdpa",
+  "prefix_attn_implementation": "sdpa",
+  "prefix_shared_prompt_token_savings_ratio": 0.7470412116942585
+}

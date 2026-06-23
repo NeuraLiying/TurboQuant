@@ -1,0 +1,41 @@
+{
+  "groups": 150,
+  "records": 600,
+  "generate_quality": true,
+  "predictions_output": "/home/liying/projects/turboquant/2026-06-22_shared-kv-systems/baseline_runs/cachegen_llama31_8b/repeated_context_shared/cachegen-quality-q2-shard1200-1800/predictions.jsonl",
+  "shared_prefix_table_storage_nbytes": 41962704204,
+  "request_storage_nbytes": 8725482240,
+  "shared_total_storage_nbytes": 50688186444,
+  "fp16_shared_total_storage_nbytes": 296103211136,
+  "shared_total_savings_vs_fp16_shared": 0.8288158164528687,
+  "mean_prefix_storage_saving": 0.8539691779632342,
+  "mean_encode_s": 0.4310533459143092,
+  "mean_decode_s": 0.5349990014048914,
+  "mean_rel_l2": 0.25811334073543546,
+  "max_rel_l2": 0.2612241804599762,
+  "score": 0.5182780380903952,
+  "task_summaries": {
+    "musique": {
+      "groups": 100,
+      "records": 400,
+      "shared_total_storage_nbytes": 32041234623,
+      "fp16_shared_total_storage_nbytes": 207784135424,
+      "shared_total_savings_vs_fp16_shared": 0.8457955678010869,
+      "mean_prefix_storage_saving": 0.8539331113920795,
+      "mean_rel_l2": 0.2570833146572113,
+      "max_rel_l2": 0.2612241804599762,
+      "score": 0.2774170571355926
+    },
+    "passage_retrieval_en": {
+      "groups": 50,
+      "records": 200,
+      "shared_total_storage_nbytes": 18646951821,
+      "fp16_shared_total_storage_nbytes": 88319075712,
+      "shared_total_savings_vs_fp16_shared": 0.7888683540823512,
+      "mean_prefix_storage_saving": 0.8540413111055437,
+      "mean_rel_l2": 0.26017339289188385,
+      "max_rel_l2": 0.26072368025779724,
+      "score": 1.0
+    }
+  }
+}

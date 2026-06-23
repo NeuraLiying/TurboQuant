@@ -1,0 +1,28 @@
+{
+  "records": 4,
+  "expected": 4,
+  "complete": true,
+  "groups": 1,
+  "score": 0.35,
+  "score_percent": 35.0,
+  "avg_latency_seconds": 0.4994274090277031,
+  "shared_prefix_table_storage_nbytes": 468545088,
+  "shared_prefix_materialized_cache_nbytes": 935329792,
+  "request_storage_nbytes": 19529856,
+  "shared_total_storage_nbytes": 488074944,
+  "task_summaries": [
+    {
+      "task": "2wikimqa",
+      "records": 4,
+      "groups": 1,
+      "score": 0.35,
+      "score_percent": 35.0,
+      "avg_latency_seconds": 0.4994274090277031,
+      "shared_prefix_table_storage_nbytes": 468545088,
+      "shared_prefix_materialized_cache_nbytes": 935329792,
+      "request_storage_nbytes": 19529856,
+      "shared_total_storage_nbytes": 488074944,
+      "category": "MultiQA"
+    }
+  ]
+}

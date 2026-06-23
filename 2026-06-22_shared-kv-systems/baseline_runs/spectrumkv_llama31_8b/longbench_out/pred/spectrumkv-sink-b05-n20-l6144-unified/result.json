@@ -1,0 +1,14 @@
+{
+  "pred_dir": "/home/liying/projects/turboquant/2026-06-22_shared-kv-systems/baseline_runs/spectrumkv_llama31_8b/longbench_out/pred/spectrumkv-sink-b05-n20-l6144-unified",
+  "scores": {
+    "2wikimqa": 9.18,
+    "musique": 4.7,
+    "passage_retrieval_en": 50.0
+  },
+  "counts": {
+    "2wikimqa": 20,
+    "musique": 20,
+    "passage_retrieval_en": 20
+  },
+  "mean_score": 21.2933
+}

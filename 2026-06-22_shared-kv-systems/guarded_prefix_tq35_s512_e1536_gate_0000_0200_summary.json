@@ -1,0 +1,199 @@
+{
+  "candidate_jsonl": "2026-06-22_shared-kv-systems/guarded_prefix_tq35_s512_e1536_gate_0000_0200.jsonl",
+  "reference_jsonl": "reproduce/runs/repeated_context/repeated_context_answer_preserving_qa_g4_fp16_prefix_shared_reference_full.jsonl",
+  "records": 200,
+  "candidate_records": 200,
+  "reference_records": 2400,
+  "groups": 50,
+  "candidate_score": 0.4348452380952381,
+  "reference_score": 0.4384452380952381,
+  "candidate_avg_latency_seconds": 0.898829419601243,
+  "reference_avg_latency_seconds": 0.27603103439323606,
+  "score_mismatch_count": 12,
+  "prediction_mismatch_count": 23,
+  "score_mismatch_preview": [
+    {
+      "index": 0,
+      "candidate_score": 1.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "Ozalj",
+      "reference_prediction": "Gyulafeh\u00e9rv\u00e1r, Transylvania."
+    },
+    {
+      "index": 1,
+      "candidate_score": 1.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "Ozalj.",
+      "reference_prediction": "Gyulafeh\u00e9rv\u00e1r, Transylvania."
+    },
+    {
+      "index": 21,
+      "candidate_score": 0.0,
+      "reference_score": 0.25,
+      "candidate_prediction": "George Sondes, 1st Earl of Feversham",
+      "reference_prediction": "Lewis Watson, 1st Earl of Rockingham"
+    },
+    {
+      "index": 42,
+      "candidate_score": 0.0,
+      "reference_score": 1.0,
+      "candidate_prediction": "Richard Thorpe",
+      "reference_prediction": "The House Of The Seven Hawks"
+    },
+    {
+      "index": 44,
+      "candidate_score": 0.26666666666666666,
+      "reference_score": 1.0,
+      "candidate_prediction": "Marie of Brabant, Queen of France's paternal grandmother is Marie of Brabant.",
+      "reference_prediction": "Marie of Hohenstaufen"
+    },
+    {
+      "index": 67,
+      "candidate_score": 1.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "The Death of Black King",
+      "reference_prediction": "Indradhanura Chhai"
+    },
+    {
+      "index": 90,
+      "candidate_score": 1.0,
+      "reference_score": 0.32,
+      "candidate_prediction": "Hell Up In Harlem",
+      "reference_prediction": "Larry Cohen was born in 1936 and directed Hell Up In Harlem in 1973. Edv\u012bns \u0160nore was born in 1974 and"
+    },
+    {
+      "index": 148,
+      "candidate_score": 0.5,
+      "reference_score": 0.3333333333333333,
+      "candidate_prediction": "Australia",
+      "reference_prediction": "Perth, Western Australia."
+    },
+    {
+      "index": 151,
+      "candidate_score": 0.5,
+      "reference_score": 0.3333333333333333,
+      "candidate_prediction": "Australia",
+      "reference_prediction": "Perth, Western Australia"
+    },
+    {
+      "index": 152,
+      "candidate_score": 0.25,
+      "reference_score": 1.0,
+      "candidate_prediction": "Paul De Scherff was born in 1820 and Lyudmyla Olyanovska was born in 1993.",
+      "reference_prediction": "Lyudmyla Olyanovska"
+    }
+  ],
+  "prediction_mismatch_preview": [
+    {
+      "index": 0,
+      "candidate_score": 1.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "Ozalj",
+      "reference_prediction": "Gyulafeh\u00e9rv\u00e1r, Transylvania."
+    },
+    {
+      "index": 1,
+      "candidate_score": 1.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "Ozalj.",
+      "reference_prediction": "Gyulafeh\u00e9rv\u00e1r, Transylvania."
+    },
+    {
+      "index": 11,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "The film Man At Bath is directed by Christophe Honor\u00e9, and the passage does not mention where he works.",
+      "reference_prediction": "The film Man At Bath is directed by Christophe Honor\u00e9, but the question asks about the director of the film, not the director of the film."
+    },
+    {
+      "index": 21,
+      "candidate_score": 0.0,
+      "reference_score": 0.25,
+      "candidate_prediction": "George Sondes, 1st Earl of Feversham",
+      "reference_prediction": "Lewis Watson, 1st Earl of Rockingham"
+    },
+    {
+      "index": 42,
+      "candidate_score": 0.0,
+      "reference_score": 1.0,
+      "candidate_prediction": "Richard Thorpe",
+      "reference_prediction": "The House Of The Seven Hawks"
+    },
+    {
+      "index": 44,
+      "candidate_score": 0.26666666666666666,
+      "reference_score": 1.0,
+      "candidate_prediction": "Marie of Brabant, Queen of France's paternal grandmother is Marie of Brabant.",
+      "reference_prediction": "Marie of Hohenstaufen"
+    },
+    {
+      "index": 53,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "1839",
+      "reference_prediction": "1837"
+    },
+    {
+      "index": 55,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "1839",
+      "reference_prediction": "1837"
+    },
+    {
+      "index": 56,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "Poland",
+      "reference_prediction": "United States"
+    },
+    {
+      "index": 67,
+      "candidate_score": 1.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "The Death of Black King",
+      "reference_prediction": "Indradhanura Chhai"
+    }
+  ],
+  "task_summaries": [
+    {
+      "task": "2wikimqa",
+      "records": 200,
+      "groups": 50,
+      "candidate_score": 0.4348452380952381,
+      "reference_score": 0.4384452380952381,
+      "score_delta": -0.003599999999999992,
+      "candidate_avg_latency_seconds": 0.898829419601243,
+      "reference_avg_latency_seconds": 0.27603103439323606,
+      "latency_ratio": 3.256262186521981,
+      "score_mismatch_count": 12,
+      "prediction_mismatch_count": 23,
+      "candidate_prefix_table_storage_nbytes": 21055827072,
+      "reference_prefix_table_storage_nbytes": 46601866368,
+      "prefix_table_savings_ratio": 0.5481763132461501,
+      "candidate_request_storage_nbytes": 937433344,
+      "reference_request_storage_nbytes": 949754112,
+      "candidate_shared_total_storage_nbytes": 21993260416,
+      "reference_shared_total_storage_nbytes": 47551620480,
+      "shared_total_savings_ratio": 0.5374866262391569
+    }
+  ],
+  "candidate_prefix_table_storage_nbytes": 21055827072,
+  "reference_prefix_table_storage_nbytes": 46601866368,
+  "prefix_table_savings_ratio": 0.5481763132461501,
+  "candidate_request_storage_nbytes": 937433344,
+  "reference_request_storage_nbytes": 949754112,
+  "candidate_shared_total_storage_nbytes": 21993260416,
+  "reference_shared_total_storage_nbytes": 47551620480,
+  "shared_total_savings_ratio": 0.5374866262391569,
+  "candidate_materialized_nbytes": 187344879616,
+  "reference_materialized_nbytes": 187357200384,
+  "candidate_metadata": {
+    "prefix_storage_mode": "turboquant",
+    "prefix_kv_bits": 3.5,
+    "prefix_key_quantizer": "mse",
+    "prefix_value_quantizer": "mse",
+    "prefix_raw_start_tokens": 512,
+    "prefix_raw_end_tokens": 1536
+  }
+}

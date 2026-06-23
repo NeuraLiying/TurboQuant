@@ -1,0 +1,71 @@
+{
+  "path": "reproduce/runs/repeated_context/repeated_context_answer_preserving_qa_g4_turboquant_3p5_full.jsonl",
+  "num_examples": 2400,
+  "contains_answer_accuracy": 0.5479166666666667,
+  "avg_prompt_tokens": 11863.882916666667,
+  "avg_generated_tokens": 5.417083333333333,
+  "avg_latency_seconds": 9.683322190524196,
+  "avg_cache_storage_ratio": 0.23444893226564625,
+  "avg_cache_storage_nbytes": 364682929.49333334,
+  "avg_cache_materialized_nbytes": 1555601817.6,
+  "longbench_score": 56.866046519228036,
+  "longbench_dataset_scores": {
+    "2wikimqa": 42.37767371517371,
+    "musique": 29.095465842510503,
+    "passage_retrieval_en": 99.125
+  },
+  "longbench_category_scores": {
+    "MultiQA": 35.73656977884207,
+    "Synthetic": 99.125
+  },
+  "table1_category_coverage": {
+    "SingleQA": {
+      "available": [],
+      "missing": [
+        "narrativeqa",
+        "qasper",
+        "multifieldqa_en"
+      ]
+    },
+    "MultiQA": {
+      "available": [
+        "2wikimqa",
+        "musique"
+      ],
+      "missing": [
+        "hotpotqa"
+      ]
+    },
+    "Summarization": {
+      "available": [],
+      "missing": [
+        "gov_report",
+        "qmsum",
+        "multi_news"
+      ]
+    },
+    "Few shot": {
+      "available": [],
+      "missing": [
+        "trec",
+        "triviaqa",
+        "samsum"
+      ]
+    },
+    "Synthetic": {
+      "available": [
+        "passage_retrieval_en"
+      ],
+      "missing": [
+        "passage_count"
+      ]
+    },
+    "Code": {
+      "available": [],
+      "missing": [
+        "lcc",
+        "repobench-p"
+      ]
+    }
+  }
+}

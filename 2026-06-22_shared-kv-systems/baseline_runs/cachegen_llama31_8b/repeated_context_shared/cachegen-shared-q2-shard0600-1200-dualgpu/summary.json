@@ -1,0 +1,36 @@
+{
+  "groups": 150,
+  "records": 600,
+  "shared_prefix_table_storage_nbytes": 37592761424,
+  "request_storage_nbytes": 2526825216,
+  "shared_total_storage_nbytes": 40119586640,
+  "fp16_shared_total_storage_nbytes": 259560992896,
+  "shared_total_savings_vs_fp16_shared": 0.8454329127332512,
+  "mean_prefix_storage_saving": 0.8531404424403592,
+  "mean_encode_s": 0.41418675911612807,
+  "mean_decode_s": 0.5055099725381782,
+  "mean_rel_l2": 0.2570579973856608,
+  "max_rel_l2": 0.2611929178237915,
+  "task_summaries": {
+    "2wikimqa": {
+      "groups": 50,
+      "records": 200,
+      "shared_total_storage_nbytes": 8446675490,
+      "fp16_shared_total_storage_nbytes": 52703274368,
+      "shared_total_savings_vs_fp16_shared": 0.8397314855426024,
+      "mean_prefix_storage_saving": 0.8514557248541508,
+      "mean_rel_l2": 0.25639711916446684,
+      "max_rel_l2": 0.2611345052719116
+    },
+    "musique": {
+      "groups": 100,
+      "records": 400,
+      "shared_total_storage_nbytes": 31672911150,
+      "fp16_shared_total_storage_nbytes": 206857718528,
+      "shared_total_savings_vs_fp16_shared": 0.846885524140049,
+      "mean_prefix_storage_saving": 0.8539828012334635,
+      "mean_rel_l2": 0.25738843649625776,
+      "max_rel_l2": 0.2611929178237915
+    }
+  }
+}

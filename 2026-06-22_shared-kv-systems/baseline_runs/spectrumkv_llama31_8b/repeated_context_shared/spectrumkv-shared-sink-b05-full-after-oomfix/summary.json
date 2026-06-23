@@ -1,0 +1,54 @@
+{
+  "records": 2400,
+  "expected": 2400,
+  "complete": true,
+  "groups": 600,
+  "score": 0.5890363711935362,
+  "score_percent": 58.903637119353625,
+  "avg_latency_seconds": 0.5198785990932568,
+  "shared_prefix_table_storage_nbytes": 463247338752,
+  "shared_prefix_materialized_cache_nbytes": 924728426496,
+  "request_storage_nbytes": 34882792448,
+  "shared_total_storage_nbytes": 498130131200,
+  "task_summaries": [
+    {
+      "task": "2wikimqa",
+      "records": 800,
+      "groups": 200,
+      "score": 0.46265766119845075,
+      "score_percent": 46.265766119845075,
+      "avg_latency_seconds": 0.35902178222604564,
+      "shared_prefix_table_storage_nbytes": 94936212096,
+      "shared_prefix_materialized_cache_nbytes": 189515563008,
+      "request_storage_nbytes": 3872678912,
+      "shared_total_storage_nbytes": 98808891008,
+      "category": "MultiQA"
+    },
+    {
+      "task": "musique",
+      "records": 800,
+      "groups": 200,
+      "score": 0.30945145238215904,
+      "score_percent": 30.945145238215904,
+      "avg_latency_seconds": 0.6807192513468908,
+      "shared_prefix_table_storage_nbytes": 205862210304,
+      "shared_prefix_materialized_cache_nbytes": 410935099392,
+      "request_storage_nbytes": 4095108096,
+      "shared_total_storage_nbytes": 209957318400,
+      "category": "MultiQA"
+    },
+    {
+      "task": "passage_retrieval_en",
+      "records": 800,
+      "groups": 200,
+      "score": 0.995,
+      "score_percent": 99.5,
+      "avg_latency_seconds": 0.5198947637068341,
+      "shared_prefix_table_storage_nbytes": 162448916352,
+      "shared_prefix_materialized_cache_nbytes": 324277764096,
+      "request_storage_nbytes": 26915005440,
+      "shared_total_storage_nbytes": 189363921792,
+      "category": "Synthetic"
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "policy": "oracle_mean",
+  "probe_variants": 1,
+  "min_probe_delta": 0.0,
+  "min_group_delta": 0.0,
+  "rows": 2400,
+  "groups": 600,
+  "accepted_groups": 572,
+  "rejected_groups": 28,
+  "accepted_rows": 2288,
+  "rejected_rows": 112,
+  "acceptance_ratio": 0.9533333333333334,
+  "simulated_score": 0.6003083853723388,
+  "reference_score": 0.5873738555804161,
+  "candidate_score": 0.5906820330574996,
+  "score_delta_vs_reference": 0.012934529791922666,
+  "score_delta_vs_candidate_all": 0.009626352314839215,
+  "score_mismatch_count": 63,
+  "prediction_mismatch_count": 185,
+  "simulated_avg_latency_seconds": 1.3654705427478377,
+  "reference_avg_latency_seconds": 0.3364930051957102,
+  "candidate_avg_latency_seconds": 1.4533452665396422,
+  "latency_ratio_vs_reference": 4.0579462920890625,
+  "prefix_table_storage_nbytes": 396888761856,
+  "reference_prefix_table_storage_nbytes": 924728464896,
+  "candidate_all_prefix_table_storage_nbytes": 370008632832,
+  "prefix_table_savings_vs_reference": 0.5708050774660254,
+  "shared_total_storage_nbytes": 431473365504,
+  "reference_shared_total_storage_nbytes": 959330370048,
+  "candidate_all_shared_total_storage_nbytes": 404597824000,
+  "shared_total_savings_vs_reference": 0.5502348523768603,
+  "task_summaries": [
+    {
+      "task": "2wikimqa",
+      "rows": 800,
+      "accepted_rows": 744,
+      "acceptance_ratio": 0.93,
+      "simulated_score": 0.4759540731198626,
+      "reference_score": 0.4573592304625199,
+      "candidate_score": 0.46414508755133754,
+      "score_delta_vs_reference": 0.01859484265734268
+    },
+    {
+      "task": "musique",
+      "rows": 800,
+      "accepted_rows": 748,
+      "acceptance_ratio": 0.935,
+      "simulated_score": 0.32622108299715363,
+      "reference_score": 0.3097623362787283,
+      "candidate_score": 0.3141510116211612,
+      "score_delta_vs_reference": 0.016458746718425343
+    },
+    {
+      "task": "passage_retrieval_en",
+      "rows": 800,
+      "accepted_rows": 796,
+      "acceptance_ratio": 0.995,
+      "simulated_score": 0.99875,
+      "reference_score": 0.995,
+      "candidate_score": 0.99375,
+      "score_delta_vs_reference": 0.003750000000000031
+    }
+  ],
+  "decision_summary": {
+    "accepted_mean_delta": 0.013567688592925876,
+    "rejected_mean_delta": -0.2062789781751248,
+    "accepted_probe_delta": 0.0112972177994025,
+    "rejected_probe_delta": -0.22305168724341656
+  }
+}

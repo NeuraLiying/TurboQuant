@@ -1,0 +1,13 @@
+{
+  "2wikimqa": {
+    "n": 1,
+    "mean_input_tokens": 7071.0,
+    "mean_fp16_bytes": 926810112.0,
+    "mean_cachegen_bytes": 136239145.0,
+    "mean_storage_saving": 0.8530020947807699,
+    "mean_encode_s": 0.28679704666137695,
+    "mean_decode_s": 0.304767370223999,
+    "mean_rel_l2": 0.25712770223617554,
+    "max_rel_l2": 0.25712770223617554
+  }
+}

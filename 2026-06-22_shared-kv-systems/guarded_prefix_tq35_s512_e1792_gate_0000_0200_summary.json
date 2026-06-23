@@ -1,0 +1,199 @@
+{
+  "candidate_jsonl": "2026-06-22_shared-kv-systems/guarded_prefix_tq35_s512_e1792_gate_0000_0200.jsonl",
+  "reference_jsonl": "reproduce/runs/repeated_context/repeated_context_answer_preserving_qa_g4_fp16_prefix_shared_reference_full.jsonl",
+  "records": 200,
+  "candidate_records": 200,
+  "reference_records": 2400,
+  "groups": 50,
+  "candidate_score": 0.41946680672268905,
+  "reference_score": 0.4384452380952381,
+  "candidate_avg_latency_seconds": 0.9097016568249091,
+  "reference_avg_latency_seconds": 0.27603103439323606,
+  "score_mismatch_count": 13,
+  "prediction_mismatch_count": 22,
+  "score_mismatch_preview": [
+    {
+      "index": 20,
+      "candidate_score": 0.25,
+      "reference_score": 0.0,
+      "candidate_prediction": "Lewis Watson, 1st Earl of Rockingham",
+      "reference_prediction": "George Sondes, 1st Earl of Feversham"
+    },
+    {
+      "index": 22,
+      "candidate_score": 0.25,
+      "reference_score": 0.0,
+      "candidate_prediction": "Lewis Watson, 1st Earl of Rockingham",
+      "reference_prediction": "George Sondes, 1st Earl of Feversham"
+    },
+    {
+      "index": 45,
+      "candidate_score": 1.0,
+      "reference_score": 0.6666666666666666,
+      "candidate_prediction": "Marie of Hohenstaufen",
+      "reference_prediction": "Marie of Brabant"
+    },
+    {
+      "index": 47,
+      "candidate_score": 1.0,
+      "reference_score": 0.6666666666666666,
+      "candidate_prediction": "Marie of Hohenstaufen",
+      "reference_prediction": "Marie of Brabant"
+    },
+    {
+      "index": 90,
+      "candidate_score": 0.11764705882352941,
+      "reference_score": 0.32,
+      "candidate_prediction": "Larry Cohen was born in 1936, and Edv\u012bns \u0160nore was born in 1974.",
+      "reference_prediction": "Larry Cohen was born in 1936 and directed Hell Up In Harlem in 1973. Edv\u012bns \u0160nore was born in 1974 and"
+    },
+    {
+      "index": 106,
+      "candidate_score": 0.0,
+      "reference_score": 1.0,
+      "candidate_prediction": "Joel The Lump Of Coal",
+      "reference_prediction": "Jugband Blues"
+    },
+    {
+      "index": 130,
+      "candidate_score": 1.0,
+      "reference_score": 0.6666666666666666,
+      "candidate_prediction": "Goring-on-Thames, Oxfordshire",
+      "reference_prediction": "Goring-on-Thames"
+    },
+    {
+      "index": 150,
+      "candidate_score": 0.5,
+      "reference_score": 1.0,
+      "candidate_prediction": "Australia.",
+      "reference_prediction": "Castlemaine, Victoria, Australia."
+    },
+    {
+      "index": 151,
+      "candidate_score": 0.5,
+      "reference_score": 0.3333333333333333,
+      "candidate_prediction": "Australia",
+      "reference_prediction": "Perth, Western Australia"
+    },
+    {
+      "index": 166,
+      "candidate_score": 0.24000000000000002,
+      "reference_score": 1.0,
+      "candidate_prediction": "Edwin L. Marin directed Henry Goes Arizona and Duccio Tessari directed Tex and the Lord of the Deep. Edwin L. Marin died in 195",
+      "reference_prediction": "Henry Goes Arizona"
+    }
+  ],
+  "prediction_mismatch_preview": [
+    {
+      "index": 11,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "The French film \"Man At Bath\" is directed by Christophe Honor\u00e9.",
+      "reference_prediction": "The film Man At Bath is directed by Christophe Honor\u00e9, but the question asks about the director of the film, not the director of the film."
+    },
+    {
+      "index": 20,
+      "candidate_score": 0.25,
+      "reference_score": 0.0,
+      "candidate_prediction": "Lewis Watson, 1st Earl of Rockingham",
+      "reference_prediction": "George Sondes, 1st Earl of Feversham"
+    },
+    {
+      "index": 22,
+      "candidate_score": 0.25,
+      "reference_score": 0.0,
+      "candidate_prediction": "Lewis Watson, 1st Earl of Rockingham",
+      "reference_prediction": "George Sondes, 1st Earl of Feversham"
+    },
+    {
+      "index": 45,
+      "candidate_score": 1.0,
+      "reference_score": 0.6666666666666666,
+      "candidate_prediction": "Marie of Hohenstaufen",
+      "reference_prediction": "Marie of Brabant"
+    },
+    {
+      "index": 47,
+      "candidate_score": 1.0,
+      "reference_score": 0.6666666666666666,
+      "candidate_prediction": "Marie of Hohenstaufen",
+      "reference_prediction": "Marie of Brabant"
+    },
+    {
+      "index": 53,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "1839",
+      "reference_prediction": "1837"
+    },
+    {
+      "index": 55,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "1839",
+      "reference_prediction": "1837"
+    },
+    {
+      "index": 56,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "Poland",
+      "reference_prediction": "United States"
+    },
+    {
+      "index": 88,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "The Soviet Story",
+      "reference_prediction": "Larry Cohen was born on July 15, 1936, and Edv\u012bns \u0160nore was born on March 21, 1974."
+    },
+    {
+      "index": 90,
+      "candidate_score": 0.11764705882352941,
+      "reference_score": 0.32,
+      "candidate_prediction": "Larry Cohen was born in 1936, and Edv\u012bns \u0160nore was born in 1974.",
+      "reference_prediction": "Larry Cohen was born in 1936 and directed Hell Up In Harlem in 1973. Edv\u012bns \u0160nore was born in 1974 and"
+    }
+  ],
+  "task_summaries": [
+    {
+      "task": "2wikimqa",
+      "records": 200,
+      "groups": 50,
+      "candidate_score": 0.41946680672268905,
+      "reference_score": 0.4384452380952381,
+      "score_delta": -0.018978431372549065,
+      "candidate_avg_latency_seconds": 0.9097016568249091,
+      "reference_avg_latency_seconds": 0.27603103439323606,
+      "latency_ratio": 3.295649921482889,
+      "score_mismatch_count": 13,
+      "prediction_mismatch_count": 22,
+      "candidate_prefix_table_storage_nbytes": 22263262336,
+      "reference_prefix_table_storage_nbytes": 46601866368,
+      "prefix_table_savings_ratio": 0.5222667229635364,
+      "candidate_request_storage_nbytes": 941627648,
+      "reference_request_storage_nbytes": 949754112,
+      "candidate_shared_total_storage_nbytes": 23204889984,
+      "reference_shared_total_storage_nbytes": 47551620480,
+      "shared_total_savings_ratio": 0.5120063259724267
+    }
+  ],
+  "candidate_prefix_table_storage_nbytes": 22263262336,
+  "reference_prefix_table_storage_nbytes": 46601866368,
+  "prefix_table_savings_ratio": 0.5222667229635364,
+  "candidate_request_storage_nbytes": 941627648,
+  "reference_request_storage_nbytes": 949754112,
+  "candidate_shared_total_storage_nbytes": 23204889984,
+  "reference_shared_total_storage_nbytes": 47551620480,
+  "shared_total_savings_ratio": 0.5120063259724267,
+  "candidate_materialized_nbytes": 187349073920,
+  "reference_materialized_nbytes": 187357200384,
+  "candidate_metadata": {
+    "prefix_storage_mode": "turboquant",
+    "prefix_kv_bits": 3.5,
+    "prefix_key_quantizer": "mse",
+    "prefix_value_quantizer": "mse",
+    "prefix_raw_start_tokens": 512,
+    "prefix_raw_end_tokens": 1792
+  }
+}

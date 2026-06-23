@@ -1,0 +1,203 @@
+{
+  "candidate_jsonl": "2026-06-22_shared-kv-systems/guarded_prefix_tq35_s512_e2048_cached_materialized_gate_0800_1000.jsonl",
+  "reference_jsonl": "reproduce/runs/repeated_context/repeated_context_answer_preserving_qa_g4_fp16_prefix_shared_reference_full.jsonl",
+  "records": 200,
+  "candidate_records": 200,
+  "reference_records": 2400,
+  "groups": 50,
+  "candidate_score": 0.2719012442877849,
+  "reference_score": 0.2718690476190476,
+  "candidate_avg_latency_seconds": 0.5186773762921802,
+  "reference_avg_latency_seconds": 0.4527627871814184,
+  "score_mismatch_count": 11,
+  "prediction_mismatch_count": 26,
+  "score_mismatch_preview": [
+    {
+      "index": 842,
+      "candidate_score": 0.0,
+      "reference_score": 1.0,
+      "candidate_prediction": "Robert Robinson Taylor",
+      "reference_prediction": "James Meredith"
+    },
+    {
+      "index": 845,
+      "candidate_score": 0.28571428571428575,
+      "reference_score": 0.125,
+      "candidate_prediction": "The Royal Society of Chemistry",
+      "reference_prediction": "The Royal Swedish Academy of Sciences, the Swedish Academy, the Karolinska Institutet, and the Norwegian Nobel Committee."
+    },
+    {
+      "index": 870,
+      "candidate_score": 0.6666666666666666,
+      "reference_score": 0.8,
+      "candidate_prediction": "Clifton College in England.",
+      "reference_prediction": "Clifton College, England"
+    },
+    {
+      "index": 918,
+      "candidate_score": 1.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "Philip Mountbatten",
+      "reference_prediction": "King Charles III"
+    },
+    {
+      "index": 919,
+      "candidate_score": 1.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "Philip Mountbatten",
+      "reference_prediction": "King Charles III"
+    },
+    {
+      "index": 924,
+      "candidate_score": 0.18181818181818182,
+      "reference_score": 0.7499999999999999,
+      "candidate_prediction": "Shell announced the sale of some of its assets, including its liquefied petroleum gas (LPG) business, to meet the cost of a planned $28",
+      "reference_prediction": "Shell announced that it was in the process of trying to find a potential buyer for all of its operations in Finland."
+    },
+    {
+      "index": 927,
+      "candidate_score": 0.18181818181818182,
+      "reference_score": 0.7499999999999999,
+      "candidate_prediction": "Shell announced the sale of some of its assets, including its liquefied petroleum gas (LPG) business, to meet the cost of a planned $28",
+      "reference_prediction": "Shell announced that it was in the process of trying to find a potential buyer for all of its operations in Finland."
+    },
+    {
+      "index": 988,
+      "candidate_score": 0.12903225806451613,
+      "reference_score": 0.06666666666666667,
+      "candidate_prediction": "It was the most widely read pamphlet of the American Revolution, crystallizing sentiment for independence in 1776, and it offered a new and convincing argument for",
+      "reference_prediction": "It was a clarion call for unity against the corrupt British court, so as to realize America's providential role in providing an asylum for liberty."
+    },
+    {
+      "index": 989,
+      "candidate_score": 0.12121212121212122,
+      "reference_score": 0.06666666666666667,
+      "candidate_prediction": "It was the most widely read pamphlet of the American Revolution, offering a new and convincing argument for independence by advocating a complete break with history, and it was",
+      "reference_prediction": "It was a clarion call for unity against the corrupt British court, so as to realize America's providential role in providing an asylum for liberty."
+    },
+    {
+      "index": 990,
+      "candidate_score": 0.06896551724137931,
+      "reference_score": 0.125,
+      "candidate_prediction": "It was a clarion call for unity against the corrupt British court, a widely read pamphlet that denounced hereditary monarchy as an absurdity, and a primary",
+      "reference_prediction": "It was a clarion call for unity against the corrupt British court, offered a new and convincing argument for independence, and was the most widely read pamphlet of"
+    }
+  ],
+  "prediction_mismatch_preview": [
+    {
+      "index": 808,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "Whiston",
+      "reference_prediction": "Merseyside"
+    },
+    {
+      "index": 830,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "1",
+      "reference_prediction": "2"
+    },
+    {
+      "index": 842,
+      "candidate_score": 0.0,
+      "reference_score": 1.0,
+      "candidate_prediction": "Robert Robinson Taylor",
+      "reference_prediction": "James Meredith"
+    },
+    {
+      "index": 845,
+      "candidate_score": 0.28571428571428575,
+      "reference_score": 0.125,
+      "candidate_prediction": "The Royal Society of Chemistry",
+      "reference_prediction": "The Royal Swedish Academy of Sciences, the Swedish Academy, the Karolinska Institutet, and the Norwegian Nobel Committee."
+    },
+    {
+      "index": 858,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "Armenia Dam",
+      "reference_prediction": "The source of the river that is the mouth of the Caledon River is the Orange River."
+    },
+    {
+      "index": 870,
+      "candidate_score": 0.6666666666666666,
+      "reference_score": 0.8,
+      "candidate_prediction": "Clifton College in England.",
+      "reference_prediction": "Clifton College, England"
+    },
+    {
+      "index": 904,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "The International Olympic Committee",
+      "reference_prediction": "The International Olympic Committee (IOC)"
+    },
+    {
+      "index": 910,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "1911",
+      "reference_prediction": "World War I"
+    },
+    {
+      "index": 911,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "1911",
+      "reference_prediction": "World War I"
+    },
+    {
+      "index": 918,
+      "candidate_score": 1.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "Philip Mountbatten",
+      "reference_prediction": "King Charles III"
+    }
+  ],
+  "task_summaries": [
+    {
+      "task": "musique",
+      "records": 200,
+      "groups": 50,
+      "candidate_score": 0.2719012442877849,
+      "reference_score": 0.2718690476190476,
+      "score_delta": 3.2196668737272116e-05,
+      "candidate_avg_latency_seconds": 0.5186773762921802,
+      "reference_avg_latency_seconds": 0.4527627871814184,
+      "latency_ratio": 1.145583053592146,
+      "score_mismatch_count": 11,
+      "prediction_mismatch_count": 26,
+      "candidate_prefix_table_storage_nbytes": 37011397760,
+      "reference_prefix_table_storage_nbytes": 103106219136,
+      "prefix_table_savings_ratio": 0.6410362239043901,
+      "candidate_request_storage_nbytes": 999823616,
+      "reference_request_storage_nbytes": 1001134336,
+      "candidate_shared_total_storage_nbytes": 38011221376,
+      "reference_shared_total_storage_nbytes": 104107353472,
+      "shared_total_savings_ratio": 0.6348843755189374,
+      "candidate_materialized_prefix_cache_nbytes": 86328999936
+    }
+  ],
+  "candidate_prefix_table_storage_nbytes": 37011397760,
+  "reference_prefix_table_storage_nbytes": 103106219136,
+  "prefix_table_savings_ratio": 0.6410362239043901,
+  "candidate_materialized_prefix_cache_nbytes": 86328999936,
+  "candidate_request_storage_nbytes": 999823616,
+  "reference_request_storage_nbytes": 1001134336,
+  "candidate_shared_total_storage_nbytes": 38011221376,
+  "reference_shared_total_storage_nbytes": 104107353472,
+  "shared_total_savings_ratio": 0.6348843755189374,
+  "candidate_materialized_nbytes": 413424680960,
+  "reference_materialized_nbytes": 413425991680,
+  "candidate_metadata": {
+    "prefix_storage_mode": "turboquant",
+    "prefix_kv_bits": 3.5,
+    "prefix_key_bits": 3.5,
+    "prefix_value_bits": 3.5,
+    "prefix_key_quantizer": "mse",
+    "prefix_value_quantizer": "mse",
+    "prefix_raw_start_tokens": 512,
+    "prefix_raw_end_tokens": 2048
+  }
+}

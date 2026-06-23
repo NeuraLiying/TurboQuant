@@ -1,0 +1,35 @@
+{
+  "2wikimqa": {
+    "n": 20,
+    "mean_input_tokens": 5381.3,
+    "mean_fp16_bytes": 705337753.6,
+    "mean_cachegen_bytes": 104694929.0,
+    "mean_storage_saving": 0.8502292105908644,
+    "mean_encode_s": 0.14921845197677613,
+    "mean_decode_s": 0.21790754795074463,
+    "mean_rel_l2": 0.2551014915108681,
+    "max_rel_l2": 0.25691989064216614
+  },
+  "musique": {
+    "n": 20,
+    "mean_input_tokens": 6143.95,
+    "mean_fp16_bytes": 805299814.4,
+    "mean_cachegen_bytes": 118987305.8,
+    "mean_storage_saving": 0.8522447160807343,
+    "mean_encode_s": 0.11492246389389038,
+    "mean_decode_s": 0.2628060460090637,
+    "mean_rel_l2": 0.2565599113702774,
+    "max_rel_l2": 0.257904052734375
+  },
+  "passage_retrieval_en": {
+    "n": 20,
+    "mean_input_tokens": 6143.0,
+    "mean_fp16_bytes": 805175296.0,
+    "mean_cachegen_bytes": 118659029.1,
+    "mean_storage_saving": 0.8526294835891433,
+    "mean_encode_s": 0.12219070196151734,
+    "mean_decode_s": 0.26453044414520266,
+    "mean_rel_l2": 0.25710030645132065,
+    "max_rel_l2": 0.2584783434867859
+  }
+}

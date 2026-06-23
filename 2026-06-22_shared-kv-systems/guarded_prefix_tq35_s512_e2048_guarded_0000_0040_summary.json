@@ -1,0 +1,85 @@
+{
+  "candidate_jsonl": "2026-06-22_shared-kv-systems/guarded_prefix_tq35_s512_e2048_guarded_0000_0040.jsonl",
+  "reference_jsonl": "reproduce/runs/repeated_context/repeated_context_answer_preserving_qa_g4_fp16_prefix_shared_reference_guarded_0000_0040.jsonl",
+  "records": 40,
+  "candidate_records": 40,
+  "reference_records": 40,
+  "groups": 10,
+  "candidate_score": 0.35196428571428573,
+  "reference_score": 0.3082142857142857,
+  "candidate_avg_latency_seconds": 0.8088215898140334,
+  "reference_avg_latency_seconds": 0.28647098685614764,
+  "score_mismatch_count": 3,
+  "prediction_mismatch_count": 4,
+  "score_mismatch_preview": [
+    {
+      "index": 1,
+      "candidate_score": 1.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "Ozalj.",
+      "reference_prediction": "Gyulafeh\u00e9rv\u00e1r, Transylvania."
+    },
+    {
+      "index": 14,
+      "candidate_score": 1.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "No",
+      "reference_prediction": "Yes"
+    },
+    {
+      "index": 21,
+      "candidate_score": 0.0,
+      "reference_score": 0.25,
+      "candidate_prediction": "George Sondes, 1st Earl of Feversham",
+      "reference_prediction": "Lewis Watson, 1st Earl of Rockingham"
+    }
+  ],
+  "prediction_mismatch_preview": [
+    {
+      "index": 1,
+      "candidate_score": 1.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "Ozalj.",
+      "reference_prediction": "Gyulafeh\u00e9rv\u00e1r, Transylvania."
+    },
+    {
+      "index": 11,
+      "candidate_score": 0.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "The film Man At Bath is directed by Christophe Honor\u00e9.",
+      "reference_prediction": "The film Man At Bath is directed by Christophe Honor\u00e9, but the question asks about the director of the film, not the director of the film."
+    },
+    {
+      "index": 14,
+      "candidate_score": 1.0,
+      "reference_score": 0.0,
+      "candidate_prediction": "No",
+      "reference_prediction": "Yes"
+    },
+    {
+      "index": 21,
+      "candidate_score": 0.0,
+      "reference_score": 0.25,
+      "candidate_prediction": "George Sondes, 1st Earl of Feversham",
+      "reference_prediction": "Lewis Watson, 1st Earl of Rockingham"
+    }
+  ],
+  "candidate_prefix_table_storage_nbytes": 4969513600,
+  "reference_prefix_table_storage_nbytes": 10241442432,
+  "prefix_table_savings_ratio": 0.5147642890153385,
+  "candidate_request_storage_nbytes": 177734912,
+  "reference_request_storage_nbytes": 180618496,
+  "candidate_shared_total_storage_nbytes": 5147248512,
+  "reference_shared_total_storage_nbytes": 10422060928,
+  "shared_total_savings_ratio": 0.5061198982082942,
+  "candidate_materialized_nbytes": 41143500800,
+  "reference_materialized_nbytes": 41146384384,
+  "candidate_metadata": {
+    "prefix_storage_mode": "turboquant",
+    "prefix_kv_bits": 3.5,
+    "prefix_key_quantizer": "mse",
+    "prefix_value_quantizer": "mse",
+    "prefix_raw_start_tokens": 512,
+    "prefix_raw_end_tokens": 2048
+  }
+}

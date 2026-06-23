@@ -1,0 +1,14 @@
+{
+  "pred_dir": "/home/liying/projects/turboquant/2026-06-22_shared-kv-systems/baseline_runs/skvq_llama31_8b/longbench_out/pred/skvq-k2v2-g128-w128-clip-sink5-full-l6144-unified",
+  "scores": {
+    "2wikimqa": 13.11,
+    "musique": 6.45,
+    "passage_retrieval_en": 35.76
+  },
+  "counts": {
+    "2wikimqa": 200,
+    "musique": 200,
+    "passage_retrieval_en": 200
+  },
+  "mean_score": 18.44
+}

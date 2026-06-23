@@ -1,0 +1,200 @@
+{
+  "source_artifacts": {
+    "quality_summary": "/datasets/liying/projects/turboquant/reproduce/incremental/repeated_context_quality_summary_current.json",
+    "shared_kv_plan": "/datasets/liying/projects/turboquant/reproduce/incremental/repeated_context_shared_kv_plan_current.json",
+    "reference_runtime": "/datasets/liying/projects/turboquant/reproduce/incremental/repeated_context_reference_runtime_full_summary.json",
+    "materialization_overhead": "/datasets/liying/projects/turboquant/reproduce/incremental/repeated_context_reference_materialization_overhead_full.json",
+    "split_parity": "/datasets/liying/projects/turboquant/reproduce/incremental/repeated_context_split_full_scoreparity_summary.json"
+  },
+  "rows": [
+    {
+      "name": "Full fp16 independent",
+      "status": "claim-ready baseline",
+      "quality_source": "measured full run",
+      "score": 58.727646128388706,
+      "latency_seconds": 1.7303099989584492,
+      "persistent_kv_bytes": 3733515534336,
+      "memory_delta_vs_full": 0.0,
+      "quality_delta_vs_full": 0.0,
+      "notes": "Each request materializes its own prompt and decode KV."
+    },
+    {
+      "name": "fp16 Shared-KV reference",
+      "status": "claim-ready systems result",
+      "quality_source": "measured full run, 2400/2400 clone parity",
+      "score": 58.73738555804161,
+      "latency_seconds": 0.3364930051957102,
+      "persistent_kv_bytes": 959330370048,
+      "memory_delta_vs_full": 0.7430490482159959,
+      "quality_delta_vs_full": 0.009739429652903198,
+      "notes": "Prefix table is stored once; stock attention still materializes prefix+local tensors."
+    },
+    {
+      "name": "TurboQuant 2.5 independent",
+      "status": "measured negative codec baseline",
+      "quality_source": "measured full run",
+      "score": 50.152794942572896,
+      "latency_seconds": 3.8960022138567485,
+      "persistent_kv_bytes": 641845448704,
+      "memory_delta_vs_full": 0.8280855020419378,
+      "quality_delta_vs_full": -8.57485118581581,
+      "notes": "Large storage reduction, but quality and latency fail the systems claim."
+    },
+    {
+      "name": "TurboQuant 3.5 independent",
+      "status": "measured Pareto comparator",
+      "quality_source": "measured full run",
+      "score": 56.866046519228014,
+      "latency_seconds": 9.683322190524196,
+      "persistent_kv_bytes": 875239030784,
+      "memory_delta_vs_full": 0.7655724148634995,
+      "quality_delta_vs_full": -1.8615996091606917,
+      "notes": "Nearly the same memory as fp16 Shared-KV, but lower quality and much higher latency."
+    },
+    {
+      "name": "Guarded TQ3.5 shared prefix, fp16 local",
+      "status": "full storage-quality result; no speed claim",
+      "quality_source": "measured full run, 2400 rows; 105 score mismatches vs fp16 Shared-KV",
+      "score": 59.068203305749954,
+      "latency_seconds": 1.4533452665396422,
+      "persistent_kv_bytes": 404597824000,
+      "memory_delta_vs_full": 0.891630871686742,
+      "quality_delta_vs_full": 0.3405571773612479,
+      "notes": "Shared prefix table keeps first 512 and last 2048 prefix tokens fp16, quantizes the middle prefix with TurboQuant 3.5, and keeps request-local KV fp16."
+    },
+    {
+      "name": "TurboQuant 2.5 plus shared-prefix estimate",
+      "status": "storage-only estimate",
+      "quality_source": "not validated in shared-cache runtime",
+      "score": 50.152794942572896,
+      "latency_seconds": null,
+      "persistent_kv_bytes": 162566956304,
+      "memory_delta_vs_full": 0.9564574046072873,
+      "quality_delta_vs_full": -8.57485118581581,
+      "notes": "Potential multiplicative storage frontier, but current quality gap is too large."
+    },
+    {
+      "name": "TurboQuant 3.5 plus shared-prefix estimate",
+      "status": "storage-only estimate",
+      "quality_source": "not validated in shared-cache runtime",
+      "score": 56.866046519228014,
+      "latency_seconds": null,
+      "persistent_kv_bytes": 221680897293,
+      "memory_delta_vs_full": 0.9406240859976961,
+      "quality_delta_vs_full": -1.8615996091606917,
+      "notes": "Strong storage frontier if quality can be recovered by prefix-aware quantization."
+    },
+    {
+      "name": "Quantized shared prefix, fp16 local estimate (2.5)",
+      "status": "next-experiment storage target",
+      "quality_source": "unknown; must run full protocol",
+      "score": null,
+      "latency_seconds": null,
+      "persistent_kv_bytes": 193912151458,
+      "memory_delta_vs_full": 0.9480617799297608,
+      "quality_delta_vs_full": null,
+      "notes": "Compresses the dominant shared prefix table while preserving local suffix/decode in fp16."
+    },
+    {
+      "name": "Quantized shared prefix, fp16 local estimate (3.5)",
+      "status": "next-experiment storage target",
+      "quality_source": "unknown; must run full protocol",
+      "score": null,
+      "latency_seconds": null,
+      "persistent_kv_bytes": 251714307491,
+      "memory_delta_vs_full": 0.932579815143111,
+      "quality_delta_vs_full": null,
+      "notes": "Most plausible TurboQuant integration: large storage saving while leaving request-local states exact."
+    },
+    {
+      "name": "fp16 shared prefix, quantized local estimate (2.5)",
+      "status": "low-value storage estimate",
+      "quality_source": "unknown; likely small upside",
+      "score": null,
+      "latency_seconds": null,
+      "persistent_kv_bytes": 930731475711,
+      "memory_delta_vs_full": 0.7507090925024023,
+      "quality_delta_vs_full": null,
+      "notes": "Only compresses request-local KV; total gain is small because prefix dominates storage."
+    },
+    {
+      "name": "fp16 shared prefix, quantized local estimate (3.5)",
+      "status": "low-value storage estimate",
+      "quality_source": "unknown; likely small upside",
+      "score": null,
+      "latency_seconds": null,
+      "persistent_kv_bytes": 932913763503,
+      "memory_delta_vs_full": 0.7501245796560165,
+      "quality_delta_vs_full": null,
+      "notes": "Useful as a sanity check, not a strong contribution by itself."
+    },
+    {
+      "name": "Guarded TQ3.5 shared prefix + dense prefix cache",
+      "status": "runtime diagnostic; no final speed claim",
+      "quality_source": "full run, 2400 rows; extra transient prefix cache 674.78 GB",
+      "score": 59.068203305749954,
+      "latency_seconds": 0.37720474279834887,
+      "persistent_kv_bytes": 404597824000,
+      "memory_delta_vs_full": 0.891630871686742,
+      "quality_delta_vs_full": 0.3405571773612479,
+      "notes": "Same persistent storage as the guarded prefix result, but keeps one dense materialization of each quantized shared prefix layer as transient runtime state."
+    }
+  ],
+  "derived": {
+    "claim_ready_result": {
+      "score_delta_fp16_shared_minus_full": 0.009739429652903198,
+      "latency_speedup_full_over_shared": 5.142187124965854,
+      "storage_savings_shared_vs_full": 0.7430490482159959,
+      "clone_parity_rows": 2400,
+      "clone_parity_mismatches": 0
+    },
+    "pareto_observation": {
+      "tq35_memory_over_shared_fp16": 0.9123437119375336,
+      "shared_fp16_memory_over_tq35": 1.0960781412920706,
+      "shared_fp16_quality_advantage_over_tq35": 1.8713390388135949,
+      "shared_fp16_latency_speedup_over_tq35": 28.7771871658735,
+      "shared_fp16_quality_advantage_over_tq25": 8.584590615468713,
+      "shared_fp16_latency_speedup_over_tq25": 11.578256170854921
+    },
+    "split_attention_limitation": {
+      "split_score_mismatches": 38,
+      "split_prediction_mismatches": 77,
+      "materialized_eager_score_mismatches": 32,
+      "materialized_eager_prediction_mismatches": 77
+    },
+    "storage_decomposition": {
+      "shared_prefix_table_bytes": 924728426496,
+      "request_local_bytes": 34912600064,
+      "metadata_bytes": 115200,
+      "shared_prefix_fraction_of_shared_total": 0.9636191043340964,
+      "request_local_fraction_of_shared_total": 0.03638089566590361
+    },
+    "guarded_prefix_full_result": {
+      "records": 2400,
+      "groups": 600,
+      "score_delta_vs_fp16_shared_points": 0.33081774770834516,
+      "score_delta_vs_full_fp16_points": 0.3405571773612479,
+      "score_mismatch_count": 105,
+      "prediction_mismatch_count": 233,
+      "latency_ratio_vs_fp16_shared": 4.3190950305024955,
+      "shared_total_savings_vs_fp16_shared": 0.5782497493749146,
+      "storage_savings_vs_full_fp16": 0.891630871686742
+    },
+    "cached_materialized_prefix_gate": {
+      "source_label": "full",
+      "records": 2400,
+      "groups": 600,
+      "score_delta_vs_fp16_shared_points": 0.33081774770834516,
+      "avg_latency_seconds": 0.37720474279834887,
+      "reference_avg_latency_seconds": 0.3364930051957102,
+      "latency_ratio_vs_fp16_shared": 1.1209883622364156,
+      "shared_total_savings_vs_fp16_shared": 0.5782497493749146,
+      "transient_materialized_prefix_cache_bytes": 724544651264,
+      "task_latency_ratios": {
+        "2wikimqa": 1.0766461482154863,
+        "musique": 1.1566558357345607,
+        "passage_retrieval_en": 1.1064860541372938
+      }
+    }
+  }
+}
